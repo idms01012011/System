@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบแจ้งซ่อม</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/page.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="page-header">
+    <div class="container">
+      <div class="header-main">
+        <h1>📋 ระบบแจ้งซ่อม</h1>
+        <div class="header-actions">
+          <a href="index.html" class="btn-secondary">🏠 หน้าหลัก</a>
+          <a href="service.html" class="btn-secondary">🔧 งานซ่อม</a>
+          <button class="btn-primary" onclick="openSection('request','add')">
+            📥 แจ้งซ่อมใหม่
+          </button>
+        </div>
+      </div>
+      <nav class="breadcrumb">
+        <a href="index.html">หน้าหลัก</a> > <span>แจ้งซ่อม</span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Request Dashboard -->
+  <section class="page-dashboard">
+    <div class="container">
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <div class="stat-icon">📨</div>
+          <div class="stat-content">
+            <div class="stat-value" id="total-requests">0</div>
+            <div class="stat-label">แจ้งซ่อมทั้งหมด</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-content">
+            <div class="stat-value" id="new-requests">0</div>
+            <div class="stat-label">รอรับเรื่อง</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔧</div>
+          <div class="stat-content">
+            <div class="stat-value" id="assigned-requests">0</div>
+            <div class="stat-label">มอบหมายแล้ว</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-content">
+            <div class="stat-value" id="completed-requests">0</div>
+            <div class="stat-label">ดำเนินการเสร็จ</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Stats -->
+  <section class="quick-stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="quick-stat">
+          <span class="stat-label">แจ้งซ่อมวันนี้</span>
+          <span class="stat-value" id="today-requests">0</span>
+        </div>
+        <div class="quick-stat">
+          <span class="stat-label">รอดำเนินการ</span>
+          <span class="stat-value" id="pending-requests">0</span>
+        </div>
+        <div class="quick-stat">
+          <span class="stat-label">ระยะเวลารอเฉลี่ย</span>
+          <span class="stat-value" id="avg-wait-time">0 ชม.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="page-main">
+    <div class="container">
+      <div class="content-grid">
+        <!-- Request Table -->
+        <div class="main-content">
+          <div class="table-header">
+            <h3>รายการแจ้งซ่อม</h3>
+            <div class="table-actions">
+              <div class="search-box">
+                <input type="text" id="request-search" placeholder="ค้นหาลูกค้าหรือชื่อเครื่อง...">
+                <button onclick="searchRequests()">🔍</button>
+              </div>
+              <select id="request-status-filter" onchange="filterRequests()">
+                <option value="">สถานะทั้งหมด</option>
+                <option value="new">ใหม่</option>
+                <option value="assigned">มอบหมายแล้ว</option>
+                <option value="in-progress">กำลังดำเนินการ</option>
+                <option value="completed">เสร็จสิ้น</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="request-table">
+              <thead>
+                <tr>
+                  <th>วันที่แจ้ง</th>
+                  <th>ลูกค้า</th>
+                  <th>ชื่อเครื่อง</th>
+                  <th>ยี่ห้อ/รุ่น</th>
+                  <th>อาการที่แจ้ง</th>
+                  <th>ช่างรับผิดชอบ</th>
+                  <th>สถานะ</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="request-table-body">
+                <!-- Data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>📞 แจ้งซ่อมด่วน</h4>
+            </div>
+            <div class="quick-form">
+              <input type="text" id="quick-customer" placeholder="ชื่อลูกค้า">
+              <input type="tel" id="quick-phone" placeholder="เบอร์โทร">
+              <input type="text" id="quick-equipment" placeholder="ชื่อเครื่อง">
+              <textarea id="quick-issue" placeholder="อาการเสีย"></textarea>
+              <button class="btn-primary" onclick="quickAddRequest()">บันทึกด่วน</button>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>👥 แจ้งซ่อมล่าสุด</h4>
+            </div>
+            <div class="recent-list" id="recent-requests">
+              <!-- Recent requests will be loaded here -->
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modals -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-title">เพิ่มแจ้งซ่อม</h3>
+      <form id="entity-form">
+        <!-- Form will be generated here -->
+      </form>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/request.js"></script>
+</body>
+</html>

@@ -1,153 +1,234 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Quotation Generator</title>
-    <link rel="stylesheet" href="styles_quotation.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบใบเสนอราคา</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/page.css">
 </head>
 <body>
+  <!-- Header -->
+  <header class="page-header">
     <div class="container">
-        <div class="header">
-            <h1>Quotation Generator</h1>
-            <p>ใบเสนอราคา </p>
+      <div class="header-main">
+        <h1>📄 ระบบใบเสนอราคา</h1>
+        <div class="header-actions">
+          <a href="index.html" class="btn-secondary">🏠 หน้าหลัก</a>
+          <a href="sales.html" class="btn-secondary">💰 การขาย</a>
+          <a href="Quotation_.html" class="btn-secondary">🆕 สร้างใบเสนอราคา</a>
         </div>
-
-        <div class="content">
-            <div class="form-section">
-                <h2><span class="icon">🏢</span>ข้อมูลบริษัท</h2>
-                <div class="form-group">
-                    <label>ชื่อบริษัท:</label>
-                    <input type="text" id="companyName" value="บริษัท ไอดีเอ็มเอส จำกัด">
-                </div>
-                <div class="form-group">
-                    <label>ที่อยู่บริษัท:</label>
-                    <textarea id="companyAddress">126/101 ม. 4 ต.บางละมุง อ.บางละมุง จ.ชลบุรี 20150</textarea>
-                </div>
-                <div class="form-group">
-                    <label>เลขที่ใบเสนอราคา:</label>
-                    <input type="text" id="quotationNo" value="IDMS">
-                </div>
-                <div class="form-group">
-                    <label>วันที่:</label>
-                    <input type="date" id="quotationDate" value="">
-                </div>
-
-                <h2><span class="icon">👤</span>ข้อมูลลูกค้า</h2>
-                <div class="form-group">
-                    <label>ชื่อลูกค้า:</label>
-                    <input type="text" id="customerName" value="">
-                </div>
-                <div class="form-group">
-                    <label>ที่อยู่ลูกค้า:</label>
-                    <textarea id="customerAddress"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>โทรศัพท์:</label>
-                    <input type="text" id="customerPhone" value="">
-                </div>
-
-                <h2><span class="icon">👨‍💼</span>ผู้เสนอราคา</h2>
-                <div class="form-group">
-                    <label>ชื่อผู้เสนอราคา:</label>
-                    <input type="text" id="salesName" value="นางสาวพรทิพา สุทธิพิบูลย์">
-                </div>
-                <div class="form-group">
-                    <label>โทรศัพท์:</label>
-                    <input type="text" id="salesPhone" value="095 9165976">
-                </div>
-                <div class="form-group">
-                    <label>อีเมล:</label>
-                    <input type="email" id="salesEmail" value="idms02021@gmail.com">
-                </div>
-            </div>
-
-            <div class="form-section">
-                <h2><span class="icon">📋</span>รายการสินค้า</h2>
-                <div id="itemsContainer">
-                    <div class="item-section">
-                        <div class="form-group">
-                            <label>รายละเอียดสินค้า:</label>
-                            <textarea class="item-description"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>จำนวน:</label>
-                            <input type="number" class="item-quantity" value="1" min="1">
-                        </div>
-                        <div class="form-group">
-                            <label>ราคาต่อหน่วย:</label>
-                            <input type="number" class="item-price" value="" min="0" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>รวม:</label>
-                            <input type="number" class="item-total" readonly>
-                        </div>
-                        <button type="button" class="remove-btn" onclick="removeItem(this)">🗑️</button>
-                    </div>
-                </div>
-                
-                <button type="button" class="add-btn" onclick="addItem()">
-                    <span>➕</span> เพิ่มรายการ
-                </button>
-
-                <div class="total-section">
-                    <div class="total-row">
-                        <span>รวมสินค้า:</span>
-                        <span id="subtotal">฿0.00</span>
-                    </div>
-                    <div class="total-row">
-                        <span>ส่วนลด:</span>
-                        <input type="number" id="discount" value="0" min="0" step="0.01" style="width: 100px; text-align: right;">
-                    </div>
-                    <div class="total-row">
-                        <span>VAT 7%:</span>
-                        <span id="vat">฿0.00</span>
-                    </div>
-                    <div class="total-row total-final">
-                        <span>รวมทั้งสิ้น:</span>
-                        <span id="grandTotal">฿0.00</span>
-                    </div>
-                </div>
-
-                <h2><span class="icon">📝</span>หมายเหตุ</h2>
-                <div class="form-group">
-                    <textarea id="notes" placeholder="เงื่อนไขการชำระเงิน การรับประกัน ฯลฯ">1.ส่งสินค้าภายใน 30 วัน / ชำระเงินวันที่รับสินค้า
-2.เงื่อนไขชำระค่าบริการ ในนามบริษัท ไอดีเอ็มเอส จำกัด ธ.กสิกรไทย ออมทรัพย์ เลขที่บัญชี 720-282-4222
-3.รับประกันการใช้งาน 90 วัน</textarea>
-                </div>
-                <label>🖊️ ลายเซ็นบริษัท</label>
-                <canvas height="100" id="signCompany" width="300"></canvas>
-                <br>
-                <button class="btn small" onclick="clearCanvas('signCompany')" type="button">ล้างลายเซ็น</button>
-                
-                <button type="button" class="generate-btn" onclick="previewPDF()" style="background: linear-gradient(135deg, #059669, #10b981); margin-top: 10px;">
-                    <span>👁️</span> ดูตัวอย่าง PDF
-                </button>
-                <a class="generate-btn" href="index.html">🔙 กลับ</a>
-            </div>
-        </div>
-
-        <!-- PDF Preview Modal -->
-        <div id="pdfPreview" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; padding: 20px; box-sizing: border-box;">
-            <div style="background: white; width: 100%; height: 100%; border-radius: 10px; overflow: auto; position: relative;">
-                <button onclick="closePDFPreview()" style="position: absolute; top: 10px; right: 10px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 18px; z-index: 1001;">✕</button>
-                <div id="pdfContent" style="padding: 40px; max-width: 800px; margin: 0 auto; font-family: 'Sarabun', 'Tahoma', sans-serif; line-height: 1.6;">
-                    <!-- PDF content will be generated here -->
-                </div>
-                <div style="text-align: center; padding: 20px; border-top: 1px solid #ddd;">
-                    <button onclick="downloadPDFFromPreview()" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; border: none; border-radius: 8px; padding: 12px 24px; font-size: 16px; cursor: pointer; margin-right: 10px;">
-                        📥 ดาวน์โหลด PDF
-                    </button>
-                    <button onclick="closePDFPreview()" style="background: #6b7280; color: white; border: none; border-radius: 8px; padding: 12px 24px; font-size: 16px; cursor: pointer;">
-                        ปิด
-                    </button>
-                </div>
-            </div>
-        </div>
+      </div>
+      <nav class="breadcrumb">
+        <a href="index.html">หน้าหลัก</a> > <span>ใบเสนอราคา</span>
+      </nav>
     </div>
-    <script src="logo.js"></script>
-    <script src="script_quotation.js"></script>
+  </header>
+
+  <!-- Quotation Dashboard -->
+  <section class="page-dashboard">
+    <div class="container">
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <div class="stat-icon">📄</div>
+          <div class="stat-content">
+            <div class="stat-value" id="total-quotations">0</div>
+            <div class="stat-label">ใบเสนอราคาทั้งหมด</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-content">
+            <div class="stat-value" id="pending-quotations">0</div>
+            <div class="stat-label">รอตอบรับ</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-content">
+            <div class="stat-value" id="approved-quotations">0</div>
+            <div class="stat-label">ได้รับการตอบรับ</div>
+          </div>
+        </div>
+        <div class="stat-card revenue">
+          <div class="stat-icon">💰</div>
+          <div class="stat-content">
+            <div class="stat-value" id="total-quotation-value">0 ฿</div>
+            <div class="stat-label">มูลค่ารวม</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quotation Tools -->
+  <section class="tools-section">
+    <div class="container">
+      <div class="tools-grid">
+        <div class="tool-card" onclick="createNewQuotation()">
+          <div class="tool-icon">🆕</div>
+          <div class="tool-content">
+            <h4>สร้างใหม่</h4>
+            <p>สร้างใบเสนอราคาใหม่</p>
+          </div>
+        </div>
+        <div class="tool-card" onclick="quickQuotation()">
+          <div class="tool-icon">⚡</div>
+          <div class="tool-content">
+            <h4>เสนอราคาด่วน</h4>
+            <p>สร้างใบเสนอราคาอย่างรวดเร็ว</p>
+          </div>
+        </div>
+        <div class="tool-card" onclick="importQuotationTemplate()">
+          <div class="tool-icon">📁</div>
+          <div class="tool-content">
+            <h4>เทมเพลต</h4>
+            <p>ใช้เทมเพลตสำเร็จรูป</p>
+          </div>
+        </div>
+        <div class="tool-card" onclick="exportQuotationReport()">
+          <div class="tool-icon">📊</div>
+          <div class="tool-content">
+            <h4>รายงาน</h4>
+            <p>ส่งออกรายงาน</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="page-main">
+    <div class="container">
+      <div class="content-grid">
+        <!-- Quotation Table -->
+        <div class="main-content">
+          <div class="table-header">
+            <h3>รายการใบเสนอราคา</h3>
+            <div class="table-actions">
+              <div class="filter-group">
+                <select id="quotation-status" onchange="filterQuotations()">
+                  <option value="all">ทั้งหมด</option>
+                  <option value="draft">ร่าง</option>
+                  <option value="sent">ส่งแล้ว</option>
+                  <option value="pending">รอตอบรับ</option>
+                  <option value="approved">ตอบรับแล้ว</option>
+                  <option value="rejected">ปฏิเสธ</option>
+                  <option value="expired">หมดอายุ</option>
+                </select>
+                <select id="quotation-period" onchange="filterQuotations()">
+                  <option value="all">ทั้งหมด</option>
+                  <option value="today">วันนี้</option>
+                  <option value="week">สัปดาห์นี้</option>
+                  <option value="month">เดือนนี้</option>
+                </select>
+              </div>
+              <div class="search-box">
+                <input type="text" id="quotation-search" placeholder="ค้นหาลูกค้า, เลขที่ใบเสนอราคา...">
+                <button onclick="searchQuotations()">🔍</button>
+              </div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="quotation-table">
+              <thead>
+                <tr>
+                  <th>เลขที่</th>
+                  <th>ลูกค้า</th>
+                  <th>วันที่สร้าง</th>
+                  <th>วันที่หมดอายุ</th>
+                  <th>ยอดรวม</th>
+                  <th>สถานะ</th>
+                  <th>พนักงานขาย</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="quotation-table-body">
+                <!-- Data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>📈 สถิติวันนี้</h4>
+            </div>
+            <div class="today-stats">
+              <div class="today-stat">
+                <span class="stat-name">สร้างใหม่</span>
+                <span class="stat-value" id="today-created">0</span>
+              </div>
+              <div class="today-stat">
+                <span class="stat-name">ส่งแล้ว</span>
+                <span class="stat-value" id="today-sent">0</span>
+              </div>
+              <div class="today-stat">
+                <span class="stat-name">ตอบรับ</span>
+                <span class="stat-value" id="today-approved">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>⚠️ ใกล้หมดอายุ</h4>
+            </div>
+            <div class="expiring-list" id="expiring-quotations">
+              <!-- Expiring quotations will be loaded here -->
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>🎯 เทมเพลตยอดนิยม</h4>
+            </div>
+            <div class="template-list" id="popular-templates">
+              <div class="template-item" onclick="useTemplate('standard')">
+                <span class="template-name">มาตรฐาน</span>
+                <span class="template-count">ใช้แล้ว 156 ครั้ง</span>
+              </div>
+              <div class="template-item" onclick="useTemplate('premium')">
+                <span class="template-name">พรีเมียม</span>
+                <span class="template-count">ใช้แล้ว 89 ครั้ง</span>
+              </div>
+              <div class="template-item" onclick="useTemplate('service')">
+                <span class="template-name">บริการซ่อม</span>
+                <span class="template-count">ใช้แล้ว 234 ครั้ง</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <!-- Quotation Editor Modal -->
+  <div id="quotation-editor" class="modal">
+    <div class="modal-content" style="max-width: 90%; width: 1000px;">
+      <div class="modal-header">
+        <h3>แก้ไขใบเสนอราคา</h3>
+        <button onclick="closeQuotationEditor()">✕</button>
+      </div>
+      <div class="quotation-editor-content">
+        <!-- Quotation editor will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Standard Modals -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-title">เพิ่มใบเสนอราคา</h3>
+      <form id="entity-form">
+        <!-- Form will be generated here -->
+      </form>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/quotation.js"></script>
 </body>
 </html>

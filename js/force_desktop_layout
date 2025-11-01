@@ -1,0 +1,28 @@
+// force_desktop_layout.js
+
+function forceDesktopLayout() {
+    // บังคับให้โครงสร้างหลักแสดงผลแบบ 2 คอลัมน์ (Desktop Layout)
+    const content = document.querySelector('.content');
+    const container = document.querySelector('.container');
+    
+    if (content) {
+        content.style.gridTemplateColumns = '1fr 1fr'; 
+        content.style.overflowX = 'auto'; 
+    }
+    
+    if (container) {
+        // อาจตั้งค่าความกว้างสูงสุดให้กว้างขึ้น เพื่อรองรับ Layout ที่ใหญ่ขึ้น
+        container.style.maxWidth = '1200px'; 
+    }
+    
+    // (ทางเลือก) ลบ CSS media query ที่ปรับเป็น Mobile View เพื่อความชัวร์
+    // หรือตรวจสอบให้แน่ใจว่า CSS Grid ถูกเซ็ตไว้เป็น 2 คอลัมน์โดย Default
+    
+}
+
+// เรียกใช้ฟังก์ชันเมื่อ DOM โหลดเสร็จ
+window.addEventListener('DOMContentLoaded', forceDesktopLayout);
+
+// (ทางเลือก) หากมีฟังก์ชันที่คุณต้องการเรียกใช้ในทุกหน้า 
+// เช่น attachEventListeners, calculateTotals 
+// คุณสามารถสร้างฟังก์ชันรวมและเรียกใช้ในนี้ได้

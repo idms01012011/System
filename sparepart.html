@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบจัดการอะไหล่</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/page.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="page-header">
+    <div class="container">
+      <div class="header-main">
+        <h1>🔩 ระบบจัดการอะไหล่</h1>
+        <div class="header-actions">
+          <a href="index.html" class="btn-secondary">🏠 หน้าหลัก</a>
+          <a href="equipment.html" class="btn-secondary">⚙️ อุปกรณ์</a>
+          <button class="btn-primary" onclick="openSection('sparepart','add')">
+            ➕ เพิ่มอะไหล่
+          </button>
+        </div>
+      </div>
+      <nav class="breadcrumb">
+        <a href="index.html">หน้าหลัก</a> > <span>อะไหล่</span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Sparepart Dashboard -->
+  <section class="page-dashboard">
+    <div class="container">
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-content">
+            <div class="stat-value" id="total-spareparts">0</div>
+            <div class="stat-label">อะไหล่ทั้งหมด</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-content">
+            <div class="stat-value" id="in-stock">0</div>
+            <div class="stat-label">มีในสต็อก</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-content">
+            <div class="stat-value" id="low-stock">0</div>
+            <div class="stat-label">สต็อกต่ำ</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-content">
+            <div class="stat-value" id="stock-value">0 ฿</div>
+            <div class="stat-label">มูลค่าสต็อก</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Alert Section -->
+  <section class="alert-section">
+    <div class="container">
+      <div class="alert-grid" id="stock-alerts">
+        <!-- Stock alerts will be loaded here -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="page-main">
+    <div class="container">
+      <div class="content-grid">
+        <!-- Sparepart Table -->
+        <div class="main-content">
+          <div class="table-header">
+            <h3>รายการอะไหล่</h3>
+            <div class="table-actions">
+              <div class="filter-group">
+                <select id="stock-status" onchange="filterSpareparts()">
+                  <option value="all">ทั้งหมด</option>
+                  <option value="in-stock">มีในสต็อก</option>
+                  <option value="low-stock">สต็อกต่ำ</option>
+                  <option value="out-of-stock">หมดสต็อก</option>
+                </select>
+                <select id="sparepart-category" onchange="filterSpareparts()">
+                  <option value="">ประเภททั้งหมด</option>
+                  <!-- Categories will be populated dynamically -->
+                </select>
+              </div>
+              <div class="search-box">
+                <input type="text" id="sparepart-search" placeholder="ค้นหาชื่ออะไหล่, ยี่ห้อ, รหัส...">
+                <button onclick="searchSpareparts()">🔍</button>
+              </div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="sparepart-table">
+              <thead>
+                <tr>
+                  <th>รูปภาพ</th>
+                  <th>ชื่ออะไหล่</th>
+                  <th>ยี่ห้อ/รุ่น</th>
+                  <th>รหัส</th>
+                  <th>ประเภท</th>
+                  <th>สถานะ</th>
+                  <th>จำนวน</th>
+                  <th>ราคาขาย</th>
+                  <th>ราคาต้นทุน</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="sparepart-table-body">
+                <!-- Data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>📊 สถิติสต็อก</h4>
+            </div>
+            <div class="stock-stats">
+              <div class="stat-row">
+                <span class="stat-name">มูลค่าสต็อกทั้งหมด</span>
+                <span class="stat-value" id="total-stock-value">0 ฿</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-name">อะไหล่สต็อกต่ำ</span>
+                <span class="stat-value warning" id="low-stock-count">0</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-name">อะไหล่หมดสต็อก</span>
+                <span class="stat-value danger" id="out-of-stock-count">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>🚨 อะไหล่สต็อกต่ำ</h4>
+            </div>
+            <div class="low-stock-list" id="low-stock-items">
+              <!-- Low stock items will be loaded here -->
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>🚀 การดำเนินการด่วน</h4>
+            </div>
+            <div class="quick-actions-vertical">
+              <button class="btn-secondary" onclick="openSection('sparepart','add')">
+                ➕ เพิ่มอะไหล่ใหม่
+              </button>
+              <button class="btn-secondary" onclick="showStockAdjustment()">
+                📝 ปรับสต็อก
+              </button>
+              <button class="btn-secondary" onclick="generateStockReport()">
+                📊 รายงานสต็อก
+              </button>
+              <button class="btn-secondary" onclick="showReorderList()">
+                📋 รายการสั่งซื้อ
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modals -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-title">เพิ่มอะไหล่</h3>
+      <form id="entity-form">
+        <!-- Form will be generated here -->
+      </form>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/sparepart.js"></script>
+</body>
+</html>

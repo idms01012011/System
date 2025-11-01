@@ -3,21 +3,191 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบจัดการข้อมูล</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="thsarabun.js"></script>
-  <script src="thsarabun-bold.js"></script>
+  <title>Dashboard - ระบบจัดการข้อมูลทั้งหมด</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/page.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1 class="title">ระบบจัดการข้อมูลทั้งหมด</h1>
-  <a href="quotation.html" class="change-page-btn">ใบเสนอราคา</a>
-  <div class="cards" id="tables-container">
-    <!-- ตารางแต่ละหัวข้อจะถูกโหลดด้วย JS -->
-  </div>
+  <!-- Header -->
+  <header class="dashboard-header">
+    <div class="header-content">
+      <h1>🚀 ระบบจัดการข้อมูลทั้งหมด</h1>
+      <p class="subtitle">ศูนย์ควบคุมและติดตามสถานะระบบครบวงจร</p>
+      <div class="header-stats">
+        <span class="live-badge">🟢 ระบบทำงานปกติ</span>
+        <span id="last-update">อัพเดทล่าสุด: กำลังโหลด...</span>
+      </div>
+    </div>
+  </header>
 
-  <!-- ===== Modal Add/Edit ===== -->
+  <!-- Main Navigation -->
+  <nav class="main-nav">
+    <div class="nav-container">
+      <a href="service.html" class="nav-item">
+        <span class="nav-icon">🔧</span>
+        <span class="nav-text">งานซ่อม</span>
+      </a>
+      <a href="request.html" class="nav-item">
+        <span class="nav-icon">📋</span>
+        <span class="nav-text">แจ้งซ่อม</span>
+      </a>
+      <a href="sales.html" class="nav-item">
+        <span class="nav-icon">💰</span>
+        <span class="nav-text">การขาย</span>
+      </a>
+      <a href="rental.html" class="nav-item">
+        <span class="nav-icon">📦</span>
+        <span class="nav-text">การเช่า</span>
+      </a>
+      <a href="equipment.html" class="nav-item">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-text">อุปกรณ์</span>
+      </a>
+      <a href="customers.html" class="nav-item">
+        <span class="nav-icon">👥</span>
+        <span class="nav-text">ลูกค้า</span>
+      </a>
+      <a href="sparepart.html" class="nav-item">
+        <span class="nav-icon">🔩</span>
+        <span class="nav-text">อะไหล่</span>
+      </a>
+      <a href="quotation.html" class="nav-item">
+        <span class="nav-icon">📄</span>
+        <span class="nav-text">ใบเสนอราคา</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Quick Actions -->
+  <section class="quick-actions">
+    <div class="container">
+      <h2>🚀 การดำเนินการด่วน</h2>
+      <div class="action-grid">
+        <button class="action-btn" onclick="location.href='service.html?action=add'">
+          <span class="action-icon">➕</span>
+          <span class="action-text">เพิ่มงานซ่อมใหม่</span>
+        </button>
+        <button class="action-btn" onclick="location.href='request.html?action=add'">
+          <span class="action-icon">📥</span>
+          <span class="action-text">รับแจ้งซ่อม</span>
+        </button>
+        <button class="action-btn" onclick="location.href='sales.html?action=add'">
+          <span class="action-icon">🛒</span>
+          <span class="action-text">บันทึกการขาย</span>
+        </button>
+        <button class="action-btn" onclick="location.href='customers.html?action=add'">
+          <span class="action-icon">👤</span>
+          <span class="action-text">เพิ่มลูกค้าใหม่</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Dashboard Grid -->
+  <main class="dashboard-main">
+    <div class="container">
+      <!-- Statistics Cards -->
+      <section class="stats-section">
+        <h2>📊 สถิติภาพรวม</h2>
+        <div class="stats-grid" id="stats-container">
+          <!-- ข้อมูลสถิติจะถูกโหลดด้วย JavaScript -->
+        </div>
+      </section>
+
+      <!-- Charts Section -->
+      <section class="charts-section">
+        <div class="chart-row">
+          <div class="chart-card">
+            <h3>📈 สถิติงานซ่อมรายเดือน</h3>
+            <canvas id="serviceChart" height="250"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>🎯 สถานะงานซ่อม</h3>
+            <canvas id="statusChart" height="250"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recent Activity & Quick Tables -->
+      <section class="content-grid">
+        <!-- Recent Activity -->
+        <div class="activity-card">
+          <div class="card-header">
+            <h3>📝 กิจกรรมล่าสุด</h3>
+            <button class="refresh-btn" onclick="loadRecentActivity()">🔄</button>
+          </div>
+          <div class="activity-list" id="recent-activity">
+            <!-- กิจกรรมจะถูกโหลดด้วย JavaScript -->
+          </div>
+        </div>
+
+        <!-- Quick Service Table -->
+        <div class="table-card">
+          <div class="card-header">
+            <h3>🔧 งานซ่อมล่าสุด</h3>
+            <a href="service.html" class="view-all">ดูทั้งหมด →</a>
+          </div>
+          <div class="mini-table-container">
+            <table class="mini-table" id="recent-service">
+              <!-- ข้อมูลจะถูกโหลดด้วย JavaScript -->
+            </table>
+          </div>
+        </div>
+
+        <!-- Quick Request Table -->
+        <div class="table-card">
+          <div class="card-header">
+            <h3>📋 แจ้งซ่อมล่าสุด</h3>
+            <a href="request.html" class="view-all">ดูทั้งหมด →</a>
+          </div>
+          <div class="mini-table-container">
+            <table class="mini-table" id="recent-request">
+              <!-- ข้อมูลจะถูกโหลดด้วย JavaScript -->
+            </table>
+          </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="status-card">
+          <div class="card-header">
+            <h3>🖥️ สถานะระบบ</h3>
+          </div>
+          <div class="status-list">
+            <div class="status-item online">
+              <span class="status-dot"></span>
+              <span>ฐานข้อมูล</span>
+              <span class="status-text">เชื่อมต่อแล้ว</span>
+            </div>
+            <div class="status-item online">
+              <span class="status-dot"></span>
+              <span>API Service</span>
+              <span class="status-text">ทำงานปกติ</span>
+            </div>
+            <div class="status-item online">
+              <span class="status-dot"></span>
+              <span>การประมวลผล</span>
+              <span class="status-text">เร็ว</span>
+            </div>
+            <div class="status-item">
+              <span class="status-dot"></span>
+              <span>พื้นที่เก็บข้อมูล</span>
+              <span class="status-text" id="storage-status">กำลังตรวจสอบ...</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="dashboard-footer">
+    <div class="container">
+      <p>© 2024 ระบบจัดการข้อมูลทั้งหมด • อัพเดทล่าสุด: <span id="current-time"></span></p>
+    </div>
+  </footer>
+
+  <!-- Modals -->
   <div id="modal" class="modal">
     <div class="modal-content">
       <h3 id="modal-title">เพิ่มข้อมูล</h3>
@@ -27,7 +197,6 @@
     </div>
   </div>
 
-  <!-- ===== Signature Popup ===== -->
   <div id="signature-popup" class="modal signature-popup">
     <div class="modal-content">
       <h3>ลายเซ็น</h3>
@@ -40,22 +209,7 @@
     </div>
   </div>
 
-  <!-- ===== PDF Options Modal ===== -->
-  <div id="pdf-options-modal" class="modal">
-    <div class="modal-content" style="text-align: center; max-width: 300px;">
-      <h3>เลือกวิธีการดูรายงาน</h3>
-      <button onclick="viewHTMLPDF()" style="padding: 12px; margin: 10px; width: 100%; background: #8e44ad; color: white; border: none; border-radius: 6px; cursor: pointer;">
-        ดูในเว็บไซต์
-      </button>
-      <button onclick="downloadPDFFile()" style="padding: 12px; margin: 10px; width: 100%; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer;">
-        ดาวน์โหลด PDF
-      </button>
-      <button onclick="closePDFOptions()" style="padding: 12px; margin: 10px; width: 100%; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer;">
-        ยกเลิก
-      </button>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/dashboard.js"></script>
 </body>
 </html>

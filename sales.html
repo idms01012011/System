@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบการขาย</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/page.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="page-header">
+    <div class="container">
+      <div class="header-main">
+        <h1>💰 ระบบการขาย</h1>
+        <div class="header-actions">
+          <a href="index.html" class="btn-secondary">🏠 หน้าหลัก</a>
+          <button class="btn-primary" onclick="openSection('sales','add')">
+            🛒 ขายสินค้า
+          </button>
+        </div>
+      </div>
+      <nav class="breadcrumb">
+        <a href="index.html">หน้าหลัก</a> > <span>การขาย</span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Sales Dashboard -->
+  <section class="page-dashboard">
+    <div class="container">
+      <div class="dashboard-stats">
+        <div class="stat-card revenue">
+          <div class="stat-icon">💵</div>
+          <div class="stat-content">
+            <div class="stat-value" id="total-revenue">0 ฿</div>
+            <div class="stat-label">รายได้รวม</div>
+            <div class="stat-change" id="revenue-change">+0%</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-content">
+            <div class="stat-value" id="total-sales">0</div>
+            <div class="stat-label">ยอดขายทั้งหมด</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-content">
+            <div class="stat-value" id="avg-sale">0 ฿</div>
+            <div class="stat-label">ยอดขายเฉลี่ย</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📈</div>
+          <div class="stat-content">
+            <div class="stat-value" id="top-seller">-</div>
+            <div class="stat-label">พนักงานขายดีเด่น</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sales Charts -->
+      <div class="dashboard-charts">
+        <div class="chart-container">
+          <h3>รายได้รายเดือน</h3>
+          <canvas id="revenueChart"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3>ยอดขายตามสินค้า</h3>
+          <canvas id="productSalesChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sales Tools -->
+  <section class="tools-section">
+    <div class="container">
+      <div class="tools-grid">
+        <div class="tool-card" onclick="openSection('sales','add')">
+          <div class="tool-icon">🛒</div>
+          <div class="tool-content">
+            <h4>ขายสินค้า</h4>
+            <p>บันทึกรายการขายใหม่</p>
+          </div>
+        </div>
+        <div class="tool-card" onclick="generateQuotation()">
+          <div class="tool-icon">📄</div>
+          <div class="tool-content">
+            <h4>ใบเสนอราคา</h4>
+            <p>สร้างใบเสนอราคา</p>
+          </div>
+        </div>
+        <div class="tool-card" onclick="exportSalesReport()">
+          <div class="tool-icon">📊</div>
+          <div class="tool-content">
+            <h4>รายงานขาย</h4>
+            <p>ส่งออกรายงาน</p>
+          </div>
+        </div>
+        <div class="tool-card" onclick="viewSalesAnalytics()">
+          <div class="tool-icon">📈</div>
+          <div class="tool-content">
+            <h4>วิเคราะห์ข้อมูล</h4>
+            <p>ดูสถิติการขาย</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="page-main">
+    <div class="container">
+      <div class="content-grid">
+        <!-- Sales Table -->
+        <div class="main-content">
+          <div class="table-header">
+            <h3>รายการขาย</h3>
+            <div class="table-actions">
+              <div class="filter-group">
+                <select id="date-range" onchange="filterSales()">
+                  <option value="all">ทั้งหมด</option>
+                  <option value="today">วันนี้</option>
+                  <option value="week">สัปดาห์นี้</option>
+                  <option value="month">เดือนนี้</option>
+                </select>
+                <select id="seller-filter" onchange="filterSales()">
+                  <option value="">พนักงานขายทั้งหมด</option>
+                </select>
+              </div>
+              <div class="search-box">
+                <input type="text" id="sales-search" placeholder="ค้นหาลูกค้าหรือสินค้า...">
+                <button onclick="searchSales()">🔍</button>
+              </div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="sales-table">
+              <thead>
+                <tr>
+                  <th>วันที่</th>
+                  <th>เลขที่ใบเสร็จ</th>
+                  <th>ชื่อลูกค้า</th>
+                  <th>สินค้า</th>
+                  <th>จำนวน</th>
+                  <th>ยอดรวม</th>
+                  <th>พนักงานขาย</th>
+                  <th>สถานะ</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="sales-table-body">
+                <!-- Data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sales Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>🎯 ยอดขายวันนี้</h4>
+            </div>
+            <div class="today-sales">
+              <div class="sale-stat">
+                <span class="stat-name">จำนวนรายการ</span>
+                <span class="stat-value" id="today-count">0</span>
+              </div>
+              <div class="sale-stat">
+                <span class="stat-name">ยอดขาย</span>
+                <span class="stat-value" id="today-sales">0 ฿</span>
+              </div>
+              <div class="sale-stat">
+                <span class="stat-name">เป้าหมาย</span>
+                <span class="stat-value" id="sales-target">0 ฿</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>🏆 อันดับพนักงานขาย</h4>
+            </div>
+            <div class="leaderboard" id="sales-leaderboard">
+              <!-- Leaderboard will be loaded here -->
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>📦 สินค้าขายดี</h4>
+            </div>
+            <div class="top-products" id="top-products">
+              <!-- Top products will be loaded here -->
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modals -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-title">เพิ่มการขาย</h3>
+      <form id="entity-form">
+        <!-- Form will be generated here -->
+      </form>
+    </div>
+  </div>
+
+  <div id="signature-popup" class="modal signature-popup">
+    <div class="modal-content">
+      <h3>ลายเซ็น</h3>
+      <canvas id="signature-pad" width="400" height="200"></canvas>
+      <div class="signature-buttons">
+        <button type="button" class="clear-btn" onclick="clearSignature()">ล้าง</button>
+        <button type="button" class="save-sig-btn" onclick="saveSignature()">บันทึก</button>
+        <button type="button" class="cancel-sig-btn" onclick="closeSignature()">ยกเลิก</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/sales.js"></script>
+</body>
+</html>

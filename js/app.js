@@ -1,5 +1,5 @@
 // ===== Global Variables =====
-const scriptURL = "https://script.google.com/macros/s/AKfycbyyng6vNNQAdV87I3MDBXJu7nAqDqne9j-tAF9AU0sn4bpsb8mkRLNiWEQ-cIAcqtBDpQ/exec";
+const scriptURL = "https://script.google.com/macros/s/AKfycbzFuSk3SBezVJT8qzOjCnIQyW2gFZdY5adgE4zrap9uBbwpejtkUtA9LDBxL3vbz0Hzsg/exec";
 
 // ✅ Schema ข้อมูลทั้งหมด
 const schemas = {

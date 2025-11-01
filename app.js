@@ -1,3 +1,4 @@
+// ===== Global Variables =====
 const scriptURL = "https://script.google.com/macros/s/AKfycbyyng6vNNQAdV87I3MDBXJu7nAqDqne9j-tAF9AU0sn4bpsb8mkRLNiWEQ-cIAcqtBDpQ/exec";
 
 // ✅ Schema ข้อมูลทั้งหมด
@@ -34,7 +35,6 @@ const displayColumns = {
     sparepart: ["ชื่ออะไหล่", "ยี่ห้อ", "รุ่น", "รหัส", "จำนวน", "รูปภาพอะไหล่"]
 };
 
-// Required fields for validation
 const requiredFields = {
     service: ["เลขที่ใบงาน", "ชื่อโรงพยาบาล", "ชื่อเครื่อง", "ชื่อลูกค้า"],
     customers: ["ชื่อลูกค้า", "เบอร์โทร"],
@@ -45,30 +45,19 @@ const requiredFields = {
     sparepart: ["ชื่ออะไหล่", "ยี่ห้อ"]
 };
 
-// Dropdown options
 const dropdownOptions = {
     สถานะ: ["พร้อมใช้งาน", "ไม่พร้อมใช้งาน", "อยู่ระหว่างซ่อม", "จำหน่ายแล้ว"],
     พนักงานขาย: ["นาย ก", "นาย ข", "นาง ค", "นางสาว ง", "นาย จ", "นางสาว ฉ"]
 };
 
+// ===== Global State =====
 let currentSheet = "";
 let currentData = {};
 const sheetsOrder = ["service", "request", "sales", "rental", "equipment", "customers", "sparepart"];
 
-// ===== Initialize Application =====
-function initializeApp() {
-    addDynamicCSS();
-    loadAllTables();
+// ===== Core Functions (ใช้งานได้ทุกหน้า) =====
 
-    setTimeout(() => {
-        addStatistics();
-        addSearchFilters();
-        addExportButtons();
-        enableAutoRefresh(5);
-    }, 1000);
-}
-
-// ===== Notification System =====
+// ✅ Notification System
 function showNotification(message, type = 'info') {
     const existing = document.querySelectorAll('.notification');
     existing.forEach(el => el.remove());
@@ -85,7 +74,7 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// ===== Loading System =====
+// ✅ Loading System
 function showLoading(show = true) {
     let loader = document.getElementById('loader');
     if (!loader) {
@@ -98,23 +87,7 @@ function showLoading(show = true) {
     loader.style.display = show ? 'flex' : 'none';
 }
 
-// ===== โหลดตารางทั้งหมด =====
-function loadAllTables() {
-    const container = document.getElementById("tables-container");
-    container.innerHTML = "";
-    sheetsOrder.forEach(sheet => {
-        const section = document.createElement("div");
-        section.classList.add("data-section");
-        section.innerHTML = `<h3>${sheet.toUpperCase()} <button onclick="openSection('${sheet}','add')">เพิ่ม</button></h3>
-      <table class="data-table" id="table-${sheet}">
-        <thead></thead><tbody></tbody>
-      </table>`;
-        container.appendChild(section);
-        loadSheetData(sheet);
-    });
-}
-
-// ===== โหลดข้อมูลจาก Google Apps Script =====
+// ✅ โหลดข้อมูลจาก Google Apps Script
 async function loadSheetData(sheet) {
     try {
         showLoading(true);
@@ -123,348 +96,27 @@ async function loadSheetData(sheet) {
 
         const json = await res.json();
         currentData[sheet] = json.data || [];
-        renderTable(sheet, currentData[sheet]);
+        return currentData[sheet];
 
     } catch (error) {
         console.error(`Error loading ${sheet}:`, error);
         currentData[sheet] = [];
-        renderTable(sheet, []);
         showNotification(`ไม่สามารถโหลดข้อมูล ${sheet} ได้`, 'error');
+        return [];
     } finally {
         showLoading(false);
     }
 }
 
-// ===== แสดงตารางข้อมูล =====
-function createImageElement(src, isSignature = false) {
-    const img = document.createElement("img");
-    img.classList.add("preview");
-    if (isSignature) img.classList.add("signature-preview");
-
-    // --- ส่วนแก้ไข: ปรับปรุงการสร้าง Fallback URLs ให้มีประสิทธิภาพและครอบคลุมมากขึ้น ---
-    const uniqueUrls = new Set();
-
-    // 1. เพิ่ม URL เดิมเป็นอันดับแรก
-    if (src) {
-        uniqueUrls.add(src);
-    }
-
-    // 2. พยายามดึง Google Drive File ID และเพิ่มลิงก์เข้าถึงโดยตรงทั่วไป
-    let fileId = null;
-    const driveIdMatch = src ? (src.match(/id=([a-zA-Z0-9_-]+)/) || src.match(/\/d\/([a-zA-Z0-9_-]+)/)) : null;
-    if (driveIdMatch && driveIdMatch[1]) {
-        fileId = driveIdMatch[1];
-        uniqueUrls.add(`https://drive.google.com/uc?id=${fileId}`);
-        uniqueUrls.add(`https://drive.google.com/thumbnail?id=${fileId}`);
-    }
-
-    // 3. จัดการรูปแบบ URL เฉพาะของ `googleusercontent.com/profile/picture/1`
-    //    (ตามที่ระบุในโค้ดเดิม) กรณีนี้อาจเป็นลิงก์ที่ฝังจากบริการ Google บางประเภท
-    if (src && src.includes('googleusercontent.com/profile/picture/1')) {
-        const transformedThumbnail = src.replace('googleusercontent.com/profile/picture/1', 'drive.google.com/thumbnail?id=');
-        const transformedUc = src.replace('googleusercontent.com/profile/picture/1', 'drive.google.com/uc?id=');
-        uniqueUrls.add(transformedThumbnail);
-        uniqueUrls.add(transformedUc);
-    }
-
-    // แปลง Set เป็น Array เพื่อใช้เป็นลำดับการลอง
-    const fallbackUrls = Array.from(uniqueUrls);
-
-    let currentIndex = 0;
-
-    // ฟังก์ชันสำหรับลองโหลด URL ถัดไป
-    function tryNextUrl() {
-        if (currentIndex < fallbackUrls.length) {
-            img.src = fallbackUrls[currentIndex];
-            currentIndex++;
-        } else {
-            // หากลองทุก URL แล้วยังล้มเหลว ให้แสดงภาพสำรอง (placeholder)
-            img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y4ZjlmYSIgc3Ryb2tlPSIjZGVlMmU2IiBzdHJva2Utd2lkdGg9IjIiLz4KICA8dGV4dCB4PSI1MCI yeT0iNTUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5YTNiNCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Tm8gSW1hZ2U8L3RleHQ+Cjwvc3ZnPg==';
-            img.alt = "ไม่สามารถโหลดรูปได้";
-            img.title = "รูปภาพไม่สามารถแสดงได้";
-        }
-    }
-
-    // กำหนด Event Handler ทั้งหมดให้อยู่ด้วยกัน
-    img.onerror = tryNextUrl; // เมื่อโหลดรูปภาพล้มเหลว ให้เรียกใช้ tryNextUrl
-    img.onclick = () => openImageModal(img.src); // คลิกเพื่อเปิด Modal ดูรูปภาพ
-
-    // เริ่มต้นการโหลดรูปภาพด้วย URL แรก
-    tryNextUrl();
-
-    // คืนค่าองค์ประกอบ img
-    return img;
-}
-
-function renderTable(sheet, data) {
-    const table = document.getElementById("table-" + sheet);
-    if (!table) return;
-    
-    const thead = table.querySelector("thead");
-    const tbody = table.querySelector("tbody");
-    tbody.innerHTML = "";
-
-    const cols = displayColumns[sheet] || schemas[sheet].filter(c => c !== 'id');
-    thead.innerHTML = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "<th>จัดการ</th></tr>";
-
-    const displayData = data.slice(0, 5);
-    const hasMore = data.length > 5;
-
-    displayData.forEach(row => {
-        const tr = document.createElement("tr");
-        cols.forEach(c => {
-            const td = document.createElement("td");
-            if (c.includes("รูปภาพ") && row[c]) {
-                const img = createImageElement(row[c]);
-                td.appendChild(img);
-            } else if (c.includes("ลายเซ็น") && row[c]) {
-                const img = createImageElement(row[c], true);
-                td.appendChild(img);
-            } else {
-                td.textContent = row[c] || "";
-            }
-            tr.appendChild(td);
-        });
-
-        const tdAct = document.createElement("td");
-        const btnEdit = document.createElement("button");
-        btnEdit.textContent = "แก้ไข";
-        btnEdit.className = "btn-edit";
-        btnEdit.onclick = () => openSection(sheet, "edit", row);
-
-        const btnDel = document.createElement("button");
-        btnDel.textContent = "ลบ";
-        btnDel.className = "btn-del";
-        btnDel.onclick = () => deleteRow(row.id, sheet);
-
-        tdAct.appendChild(btnEdit);
-        tdAct.appendChild(btnDel);
-
-        if (sheet === "service") {
-            const btnPdf = document.createElement("button");
-            btnPdf.textContent = "PDF";
-            btnPdf.className = "btn-pdf";
-            btnPdf.onclick = () => previewPDF(row);
-            tdAct.appendChild(btnPdf);
-        }
-
-        tr.appendChild(tdAct);
-        tbody.appendChild(tr);
-    });
-
-    if (hasMore) {
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = cols.length + 1;
-        td.style.textAlign = "center";
-        td.style.fontStyle = "italic";
-        td.style.color = "#666";
-        td.style.padding = "10px";
-        td.innerHTML = `แสดง 5 จาก ${data.length} รายการ <button onclick="showAllData('${sheet}')" style="margin-left: 10px; padding: 4px 8px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">ดูทั้งหมด</button>`;
-        tr.appendChild(td);
-        tbody.appendChild(tr);
-    }
-}
-
-function showAllData(sheet) {
-    const data = currentData[sheet] || [];
-    renderFullTable(sheet, data);
-}
-
-function renderFullTable(sheet, data) {
-    const modal = document.createElement('div');
-    modal.className = 'modal show';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 95%; max-height: 90%; overflow: auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3>${sheet.toUpperCase()} - ข้อมูลทั้งหมด (${data.length} รายการ)</h3>
-                <button onclick="this.closest('.modal').remove()" style="padding: 5px 10px; background: #e74c3c; color: white; border: none; border-radius: 4px;">ปิด</button>
-            </div>
-            <table class="data-table" id="full-table-${sheet}">
-                <thead></thead><tbody></tbody>
-            </table>
-        </div>
-    `;
-    modal.onclick = (e) => {
-        if (e.target === modal) modal.remove();
-    };
-    document.body.appendChild(modal);
-
-    renderFullTableContent(sheet, data);
-}
-
-function renderFullTableContent(sheet, data) {
-    const table = document.getElementById("full-table-" + sheet);
-    if (!table) return;
-
-    const thead = table.querySelector("thead");
-    const tbody = table.querySelector("tbody");
-    tbody.innerHTML = "";
-
-    const cols = displayColumns[sheet] || schemas[sheet].filter(c => c !== 'id');
-    thead.innerHTML = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "<th>จัดการ</th></tr>";
-
-    data.forEach(row => {
-        const tr = document.createElement("tr");
-        cols.forEach(c => {
-            const td = document.createElement("td");
-            if (c.includes("รูปภาพ") && row[c]) {
-                const img = createImageElement(row[c]);
-                td.appendChild(img);
-            } else if (c.includes("ลายเซ็น") && row[c]) {
-                const img = createImageElement(row[c], true);
-                td.appendChild(img);
-            } else {
-                td.textContent = row[c] || "";
-            }
-            tr.appendChild(td);
-        });
-
-        const tdAct = document.createElement("td");
-        const btnEdit = document.createElement("button");
-        btnEdit.textContent = "แก้ไข";
-        btnEdit.className = "btn-edit";
-        btnEdit.onclick = () => {
-            document.querySelector('.modal').remove();
-            openSection(sheet, "edit", row);
-        };
-
-        const btnDel = document.createElement("button");
-        btnDel.textContent = "ลบ";
-        btnDel.className = "btn-del";
-        btnDel.onclick = () => {
-            document.querySelector('.modal').remove();
-            deleteRow(row.id, sheet);
-        };
-
-        tdAct.appendChild(btnEdit);
-        tdAct.appendChild(btnDel);
-
-        if (sheet === "service") {
-            const btnPdf = document.createElement("button");
-            btnPdf.textContent = "PDF";
-            btnPdf.className = "btn-pdf";
-            btnPdf.onclick = () => previewPDF(row);
-            tdAct.appendChild(btnPdf);
-        }
-
-        tr.appendChild(tdAct);
-        tbody.appendChild(tr);
-    });
-}
-
-// ===== Image Modal =====
-function openImageModal(src) {
-    const modal = document.createElement('div');
-    modal.className = 'modal show';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 800px;">
-            <button onclick="this.closest('.modal').remove()" style="float: right; margin-bottom: 10px;">✕</button>
-            <img src="${src}" style="width: 100%; height: auto; border-radius: 4px;">
-        </div>
-    `;
-    modal.onclick = (e) => {
-        if (e.target === modal) modal.remove();
-    };
-    document.body.appendChild(modal);
-}
-
-// ===== Validation =====
-function validateFormData(sheet, data) {
-    const errors = [];
-
-    if (requiredFields[sheet]) {
-        requiredFields[sheet].forEach(field => {
-            if (!data[field] || String(data[field]).trim() === '') {
-                errors.push(`${field} จำเป็นต้องกรอก`);
-            }
-        });
-    }
-
-    const phoneFields = ["เบอร์โทร", "เบอร์ลูกค้า", "เบอร์ช่าง"];
-    phoneFields.forEach(field => {
-        if (data[field] && !/^[0-9\-+\s()]{8,15}$/.test(data[field])) {
-            errors.push(`${field} รูปแบบไม่ถูกต้อง`);
-        }
-    });
-
-    if (data["email"] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data["email"])) {
-        errors.push("รูปแบบ Email ไม่ถูกต้อง");
-    }
-
-    return errors;
-}
-
-// ===== Generate Next Numbers =====
-function generateNextWorkNo() {
-    const data = currentData["service"] || [];
-    if (data.length === 0) return "IDMS001";
-
-    const workNos = data.map(row => {
-        const workNo = String(row["เลขที่ใบงาน"] || "");
-        const match = workNo.match(/IDMS(\d+)/);
-        return match ? parseInt(match[1], 10) : 0;
-    }).filter(num => !isNaN(num) && num > 0);
-
-    const maxNo = workNos.length > 0 ? Math.max(...workNos) : 0;
-    return "IDMS" + String(maxNo + 1).padStart(3, '0');
-}
-
-function generateNextSequence(sheet) {
-    const data = currentData[sheet] || [];
-    if (data.length === 0) return 1;
-
-    const sequences = data.map(row => {
-        const seq = parseInt(row["ลำดับ"] || 0, 10);
-        return isNaN(seq) ? 0 : seq;
-    }).filter(num => num > 0);
-
-    const maxSeq = sequences.length > 0 ? Math.max(...sequences) : 0;
-    return maxSeq + 1;
-}
-
-// ===== Image Handling =====
-function previewImage(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-        showNotification('ไฟล์รูปภาพใหญ่เกินไป (สูงสุด 5MB)', 'error');
-        input.value = '';
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = e => {
-        const img = input.parentElement.querySelector("img.preview");
-        if (img) img.src = e.target.result;
-    }
-    reader.readAsDataURL(file);
-}
-
-function compressImage(file, maxWidth = 800, quality = 0.7) {
-    return new Promise((resolve) => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-
-        img.onload = () => {
-            const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
-            canvas.width = img.width * ratio;
-            canvas.height = img.height * ratio;
-
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob(resolve, 'image/jpeg', quality);
-        };
-
-        img.src = URL.createObjectURL(file);
-    });
-}
-
-// ===== Modal Add/Edit =====
+// ✅ Modal Add/Edit (ใช้งานได้ทุกหน้า)
 function openSection(sheet, mode = "add", rowData = null) {
     currentSheet = sheet;
     const modal = document.getElementById("modal");
+    if (!modal) {
+        console.error('Modal element not found');
+        return;
+    }
+    
     modal.classList.add("show");
     document.getElementById("modal-title").textContent = (mode === "edit" ? "แก้ไข " : "เพิ่ม ") + sheet;
     const form = document.getElementById("entity-form");
@@ -477,10 +129,11 @@ function openSection(sheet, mode = "add", rowData = null) {
         label.textContent = f;
         let input;
 
-        const textAreas = ["อาการที่แจ้งเสีย", "ผลการซ่อม", "หมายเหตุ"];
+        const textAreas = ["อาการที่แจ้งเสีย", "ผลการซ่อม", "หมายเหตุ", "อุปกรณ์ที่ส่งมาด้วย"];
 
         if (textAreas.some(keyword => f.includes(keyword))) {
             input = document.createElement("textarea");
+            input.rows = 3;
         } else if (f.includes("รูปภาพ")) {
             input = document.createElement("input");
             input.type = "file";
@@ -494,7 +147,7 @@ function openSection(sheet, mode = "add", rowData = null) {
             input.type = "hidden";
             const btn = document.createElement("button");
             btn.type = "button";
-            btn.textContent = "เซ็น";
+            btn.textContent = "เซ็นชื่อ";
             btn.onclick = () => openSignature(input);
             label.appendChild(btn);
         } else if (f === "สถานะ" && (sheet === "equipment" || sheet === "sparepart")) {
@@ -520,10 +173,12 @@ function openSection(sheet, mode = "add", rowData = null) {
         }
 
         input.name = f;
+        input.placeholder = `กรอก${f}`;
         label.appendChild(input);
         form.appendChild(label);
     });
 
+    // Set default values for add mode
     if (mode === "add") {
         const today = new Date().toISOString().split('T')[0];
         if (sheet === "service") {
@@ -544,6 +199,7 @@ function openSection(sheet, mode = "add", rowData = null) {
         }
     }
 
+    // Fill form with data for edit mode
     if (mode === "edit" && rowData) {
         form.querySelector("[name='id']").value = rowData.id;
         schemas[sheet].forEach(f => {
@@ -663,7 +319,6 @@ function openSection(sheet, mode = "add", rowData = null) {
             });
 
             if (!response.ok) {
-                // ✅ FIX: Log full response for debugging
                 const errorText = await response.text();
                 throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
@@ -674,9 +329,12 @@ function openSection(sheet, mode = "add", rowData = null) {
                 showNotification('บันทึกข้อมูลเรียบร้อย', 'success');
                 form.reset();
                 closeModal();
-                loadSheetData(sheet);
+                
+                // Trigger page-specific reload if exists
+                if (window.onDataChanged) {
+                    window.onDataChanged(sheet);
+                }
             } else {
-                // ✅ FIX: Log server-side error message
                 throw new Error(result.error || 'เกิดข้อผิดพลาดในการบันทึกจากเซิร์ฟเวอร์');
             }
 
@@ -693,19 +351,11 @@ function openSection(sheet, mode = "add", rowData = null) {
 }
 
 function closeModal() {
-    // ✅ FIX: Ensure the main modal is specifically targeted and closed.
     const mainModal = document.getElementById("modal");
     if (mainModal) mainModal.classList.remove("show");
-    
-    // ปิด signature popup ด้วย
+
     const sigPopup = document.getElementById("signature-popup");
     if (sigPopup) sigPopup.classList.remove("show");
-
-    // ปิด modals สำหรับ PDF options/viewer ด้วย
-    // ✅ FIX: Use a more specific selector to avoid closing unrelated modals.
-    const pdfModals = document.querySelectorAll('.modal.show[style*="z-index: 2000"]');
-    pdfModals.forEach(m => m.remove());
-    currentPDFRow = null; // Clear the current PDF row
 }
 
 function createInput(name, type = "text") {
@@ -715,14 +365,9 @@ function createInput(name, type = "text") {
     return input;
 }
 
-// ===== ลบข้อมูล =====
+// ✅ ลบข้อมูล
 async function deleteRow(id, sheet) {
-    // ✅ FIX: Add console logs to verify id and sheet
-    console.log("Attempting to delete row:", { id, sheet });
-    if (!confirm("ต้องการลบข้อมูลนี้หรือไม่?")) {
-        console.log("Delete cancelled by user.");
-        return;
-    }
+    if (!confirm("ต้องการลบข้อมูลนี้หรือไม่?")) return;
 
     try {
         showLoading(true);
@@ -739,460 +384,69 @@ async function deleteRow(id, sheet) {
         });
 
         if (!response.ok) {
-             // ✅ FIX: Log full response for debugging
             const errorText = await response.text();
             throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
         const result = await response.json();
-        console.log("Delete API response:", result); // ✅ FIX: Log server response
-
+        
         if (result.success) {
             showNotification('ลบข้อมูลเรียบร้อย', 'success');
-            loadSheetData(sheet);
+            // Trigger page-specific reload if exists
+            if (window.onDataChanged) {
+                window.onDataChanged(sheet);
+            }
         } else {
-            // ✅ FIX: Log server-side error message
             throw new Error(result.error || 'เกิดข้อผิดพลาดในการลบจากเซิร์ฟเวอร์');
         }
 
     } catch (error) {
-        console.error("Error during delete operation:", error); // ✅ FIX: More specific error log
+        console.error("Error during delete operation:", error);
         showNotification('เกิดข้อผิดพลาด: ' + error.message, 'error');
     } finally {
         showLoading(false);
     }
 }
 
-// ===== PDF Generation (Fixed for Mobile) =====
-let lastDoc = null; // เก็บ PDF ล่าสุดที่ Preview แล้ว
-let currentPDFRow = null; // เก็บข้อมูล row ที่ใช้สร้าง PDF ล่าสุด
+// ✅ Image Handling
+function previewImage(input) {
+    const file = input.files[0];
+    if (!file) return;
 
-// ฟังก์ชันตรวจสอบว่าเป็นมือถือหรือไม่
-function isMobileDevice() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-
-// แก้ไขฟังก์ชัน previewPDF
-function previewPDF(row) {
-    currentPDFRow = row; // เก็บข้อมูล row ไว้ใช้ในภายหลัง
-    
-    // ✅ FIX: Log for debugging
-    console.log("Preview PDF called for row:", row);
-
-    if (isMobileDevice()) {
-        showPDFOptions();
-    } else {
-        generateAndPreviewPDF(row);
-    }
-}
-
-// ฟังก์ชันสร้างและ Preview PDF สำหรับ Desktop
-function generateAndPreviewPDF(row) {
-    const doc = generatePDF(row);
-    if (!doc) {
-        showNotification('ไม่สามารถสร้าง PDF ได้', 'error');
-        console.error("PDF document was null, generation failed.");
-        return;
-    }
-    lastDoc = doc; // เก็บไว้ให้โหลดทีหลัง
-    try {
-        window.open(doc.output('bloburl'), '_blank');
-        console.log("PDF opened in new window (bloburl).");
-    } catch (e) {
-        console.error("Failed to open PDF in new window:", e);
-        showNotification('ไม่สามารถเปิด PDF ได้ (อาจถูกบล็อกโดย Pop-up blocker)', 'error');
-    }
-}
-
-
-// แสดง options PDF
-function showPDFOptions() {
-    const modal = document.createElement('div');
-    modal.className = 'modal show';
-    modal.style.zIndex = '2000'; // ให้ modal นี้อยู่บนสุด
-    modal.innerHTML = `
-        <div class="modal-content" style="text-align: center; max-width: 300px;">
-            <h3 style="margin-bottom: 20px;">เลือกวิธีการดูรายงาน</h3>
-            <button onclick="viewHTMLPDF()" style="padding: 12px; margin: 10px; width: 100%; background: #8e44ad; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
-                📱 ดูในเว็บไซต์
-            </button>
-            <button onclick="downloadPDFFile()" style="padding: 12px; margin: 10px; width: 100%; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
-                📄 ดาวน์โหลด PDF
-            </button>
-            <button onclick="closeModal()" style="padding: 12px; margin: 10px; width: 100%; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
-                ❌ ยกเลิก
-            </button>
-        </div>
-    `;
-    modal.onclick = function(e) {
-        if (e.target === modal) {
-            closeModal(); // ใช้ closeModal เพื่อปิด modal
-        }
-    };
-    document.body.appendChild(modal);
-    console.log("PDF Options modal shown.");
-}
-
-// ดู PDF ในรูปแบบ HTML
-function viewHTMLPDF() {
-    if (!currentPDFRow) return;
-    
-    // ปิด modal options ก่อนเปิด HTML viewer
-    closeModal(); 
-
-    const modal = document.createElement('div');
-    modal.className = 'modal show';
-    modal.style.zIndex = '2000'; // ให้ modal นี้อยู่บนสุด
-    modal.style.background = 'white'; // ตั้งพื้นหลังเป็นสีขาว
-
-    const pdfContent = `
-        <div style="max-width: 100%; height: 100vh; overflow: auto; padding: 20px; background: white;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                <h2 style="margin: 0; color: #2c3e50;">📋 Service Report</h2>
-                <div>
-                    <button onclick="printHTMLContent()" style="padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 4px; margin-right: 10px; cursor: pointer;">🖨️ พิมพ์</button>
-                    <button onclick="closeModal()" style="padding: 10px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">❌ ปิด</button>
-                </div>
-            </div>
-            <div id="pdf-html-content" style="background: white; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                ${createPDFHTMLContent(currentPDFRow)}
-            </div>
-        </div>
-    `;
-    
-    modal.innerHTML = pdfContent;
-    document.body.appendChild(modal);
-    console.log("HTML PDF viewer modal shown.");
-}
-
-// สร้างเนื้อหา HTML สำหรับ PDF
-function createPDFHTMLContent(row) {
-    const safeText = (val) => (val !== undefined && val !== null ? String(val) : '-');
-    
-    // ✅ FIX: Use the global logoBase64
-    const logoHtml = typeof logoBase64 !== 'undefined' && logoBase64 ? 
-        `<img src="${logoBase64}" alt="Company Logo" style="width: 80px; height: auto; margin-bottom: 15px;">` : '';
-
-    return `
-        <div style="font-family: 'Sarabun', 'TH Sarabun New', Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #3498db;">
-                ${logoHtml}
-                <h1 style="color: #3498db; margin-bottom: 5px; font-size: 28px;">Service Report</h1>
-                <p style="color: #7f8c8d; font-size: 16px;">เลขที่ใบงาน: ${safeText(row["เลขที่ใบงาน"])}</p>
-            </div>
-            
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 14px;">
-                <tr>
-                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa; width: 20%;">เลขที่ใบงาน</td>
-                    <td style="padding: 12px; border: 1px solid #ddd; width: 30%;">${safeText(row["เลขที่ใบงาน"])}</td>
-                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa; width: 20%;">ประเภทงาน</td>
-                    <td style="padding: 12px; border: 1px solid #ddd; width: 30%;">${safeText(row["ประเภทงาน"])}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">ชื่อโรงพยาบาล</td>
-                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["ชื่อโรงพยาบาล"])}</td>
-                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">วันที่เปิดงาน</td>
-                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["วันที่เปิดงาน"])}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">ชื่อเครื่อง</td>
-                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["ชื่อเครื่อง"])}</td>
-                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">ยี่ห้อ</td>
-                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["ยี่ห้อ"])}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">รุ่น</td>
-                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["รุ่น"])}</td>
-                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">หมายเลขเครื่อง</td>
-                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["หมายเลขเครื่อง"])}</td>
-                </tr>
-            </table>
-            
-            <div style="margin-bottom: 25px;">
-                <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;">อุปกรณ์ที่ส่งมาด้วย</h3>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #3498db;">
-                    <p style="margin: 0; color: #2c3e50;">${safeText(row["อุปกรณ์ที่ส่งมาด้วย"])}</p>
-                </div>
-            </div>
-            
-            <div style="margin-bottom: 25px;">
-                <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;">อาการที่แจ้งเสีย</h3>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #e74c3c;">
-                    <p style="margin: 0; color: #2c3e50;">${safeText(row["อาการที่แจ้งเสีย"])}</p>
-                </div>
-            </div>
-            
-            <div style="margin-bottom: 25px;">
-                <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;">ผลการซ่อม</h3>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #27ae60;">
-                    <p style="margin: 0; color: #2c3e50;">${safeText(row["ผลการซ่อม"])}</p>
-                </div>
-            </div>
-            
-            <div style="margin-bottom: 25px;">
-                <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;">รับประกัน</h3>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">
-                    <p style="margin: 0; color: #2c3e50;">${safeText(row["รับประกัน"])}</p>
-                </div>
-            </div>
-            
-            <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-bottom: 25px;">
-                ${(row["รูปภาพ1"] ? `<img src="${row["รูปภาพ1"]}" alt="รูปภาพ1" style="max-width: 150px; max-height: 100px; border: 1px solid #ddd; margin: 5px;">` : '')}
-                ${(row["รูปภาพ2"] ? `<img src="${row["รูปภาพ2"]}" alt="รูปภาพ2" style="max-width: 150px; max-height: 100px; border: 1px solid #ddd; margin: 5px;">` : '')}
-            </div>
-
-            <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd;">
-                <div style="text-align: center; flex: 1; min-width: 200px;">
-                    <div style="border-bottom: 2px solid #000; width: 200px; margin: 0 auto 15px; padding-bottom: 10px; font-weight: bold;">ลายเซ็นช่าง</div>
-                    ${(row["ลายเซ็นช่าง"] ? `<img src="${row["ลายเซ็นช่าง"]}" alt="ลายเซ็นช่าง" style="max-width: 150px; max-height: 75px; margin-bottom: 10px;">` : '')}
-                    <div style="font-size: 16px; font-weight: bold; color: #2c3e50;">${safeText(row["ชื่อช่าง"])}</div>
-                    <div style="color: #7f8c8d;">${safeText(row["เบอร์ช่าง"])}</div>
-                </div>
-                
-                <div style="text-align: center; flex: 1; min-width: 200px;">
-                    <div style="border-bottom: 2px solid #000; width: 200px; margin: 0 auto 15px; padding-bottom: 10px; font-weight: bold;">ลายเซ็นลูกค้า</div>
-                    ${(row["ลายเซ็นลูกค้า"] ? `<img src="${row["ลายเซ็นลูกค้า"]}" alt="ลายเซ็นลูกค้า" style="max-width: 150px; max-height: 75px; margin-bottom: 10px;">` : '')}
-                    <div style="font-size: 16px; font-weight: bold; color: #2c3e50;">${safeText(row["ชื่อลูกค้า"])}</div>
-                    <div style="color: #7f8c8d;">${safeText(row["เบอร์ลูกค้า"])}</div>
-                </div>
-            </div>
-            
-            <div style="margin-top: 30px; text-align: center; color: #7f8c8d; font-size: 12px; border-top: 1px solid #ddd; padding-top: 15px;">
-                <p>เอกสารนี้ถูกสร้างขึ้นโดยระบบจัดการข้อมูล IDMS</p>
-                <p>วันที่สร้าง: ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-            </div>
-        </div>
-    `;
-}
-
-// พิมพ์ PDF จาก HTML content
-function printHTMLContent() {
-    const contentToPrint = document.getElementById('pdf-html-content');
-    if (!contentToPrint) {
-        showNotification('ไม่พบเนื้อหา PDF สำหรับพิมพ์', 'error');
+    if (file.size > 5 * 1024 * 1024) {
+        showNotification('ไฟล์รูปภาพใหญ่เกินไป (สูงสุด 5MB)', 'error');
+        input.value = '';
         return;
     }
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Service Report - Print</title>
-            <style>
-                body { margin: 0; padding: 20px; font-family: 'Sarabun', 'TH Sarabun New', Arial, sans-serif; font-size: 12pt; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-                th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-                th { background-color: #f2f2f2; }
-                h1, h2, h3 { color: #333; margin-top: 20px; margin-bottom: 10px; }
-                div { line-height: 1.5; }
-                img { max-width: 100%; height: auto; }
-                @media print {
-                    body { margin: 0; padding: 0; }
-                    .no-print { display: none !important; }
-                }
-            </style>
-        </head>
-        <body>
-            ${contentToPrint.innerHTML}
-            <script>
-                window.onload = function() {
-                    window.print();
-                    setTimeout(function() {
-                        window.close();
-                    }, 500);
-                }
-            <\/script>
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-}
-
-
-// ดาวน์โหลด PDF
-function downloadPDFFile() {
-    if (!currentPDFRow) return;
-    
-    // ปิด modal options ก่อนดาวน์โหลด
-    closeModal(); 
-
-    try {
-        const doc = generatePDF(currentPDFRow);
-        if (!doc) return;
-        
-        const filename = `${currentPDFRow["เลขที่ใบงาน"] || 'service'}_report.pdf`;
-        doc.save(filename);
-        showNotification('กำลังดาวน์โหลด PDF...', 'success');
-        console.log("PDF download triggered.");
-    } catch (error) {
-        console.error('Error in downloadPDF:', error);
-        showNotification('ไม่สามารถดาวน์โหลด PDF ได้', 'error');
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = input.parentElement.querySelector("img.preview");
+        if (img) img.src = e.target.result;
     }
+    reader.readAsDataURL(file);
 }
 
-// ฟังก์ชัน generatePDF สำหรับสร้างเอกสาร PDF จริง
-function generatePDF(row) {
-    try {
-        const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
-        const doc = new jsPDFLib();
-        const safeText = (val) => (val !== undefined && val !== null ? String(val) : "");
+function compressImage(file, maxWidth = 800, quality = 0.7) {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
 
-        let hasThaiFont = false;
-        try {
-            // Check if THSarabun and THSarabunBold (from base64) are globally available
-            // ✅ FIX: Ensure these variables are defined globally (e.g., from an external script)
-            // if they are not, you'll need to define them as base64 strings here or load them.
-            // For now, it will fallback to helvetica if undefined.
-            if (typeof THSarabun !== 'undefined' && THSarabun) {
-                doc.addFileToVFS("THSarabun.ttf", THSarabun);
-                doc.addFont("THSarabun.ttf", "THSarabun", "normal");
-                
-                if (typeof THSarabunBold !== 'undefined' && THSarabunBold) {
-                    doc.addFileToVFS("THSarabun-Bold.ttf", THSarabunBold);
-                    doc.addFont("THSarabun-Bold.ttf", "THSarabun", "bold");
-                }
-                
-                hasThaiFont = true;
-                doc.setFont("THSarabun");
-            }
-        } catch (e) {
-            console.warn('Could not add Thai font (THSarabun). Falling back to Helvetica.', e);
-            doc.setFont("helvetica");
-        }
+        img.onload = () => {
+            const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+            canvas.width = img.width * ratio;
+            canvas.height = img.height * ratio;
 
-        doc.setFontSize(12);
-        let y = 10;
-
-        // Company Logo
-        try {
-            // ✅ FIX: Use the global logoBase64
-            if (typeof logoBase64 !== 'undefined' && logoBase64) {
-                doc.addImage(logoBase64, 'PNG', 10, y, 30, 30);
-            }
-        } catch (e) {
-            console.warn('Could not add company logo to PDF:', e);
-        }
-        y += 25; // Adjust y position after logo
-
-        // Title
-        doc.setFontSize(20);
-        doc.setTextColor(0, 0, 255);
-        
-        doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "bold");
-        
-        doc.text("รายงานการซ่อม", 105, y, { align: 'center' });
-        y += 10;
-        
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(12);
-        
-        doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "normal");
-
-        // Function to print a line with labels and values
-        const printLine = (label1, val1, label2, val2) => {
-            doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "bold");
-            doc.text(`${label1}:`, 20, y);
-            
-            doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "normal");
-            doc.text(`${val1 || ''}`, 50, y);
-
-            doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "bold");
-            doc.text(`${label2}:`, 120, y);
-            
-            doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "normal");
-            doc.text(`${val2 || ''}`, 150, y);
-            
-            y += 8;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(resolve, 'image/jpeg', quality);
         };
 
-        // Basic Info
-        printLine("เลขที่ใบงาน", safeText(row["เลขที่ใบงาน"]), "ประเภทงาน", safeText(row["ประเภทงาน"]));
-        printLine("ชื่อโรงพยาบาล", safeText(row["ชื่อโรงพยาบาล"]), "วันที่เปิดงาน", safeText(row["วันที่เปิดงาน"]));
-        printLine("ชื่อเครื่อง", safeText(row["ชื่อเครื่อง"]), "ยี่ห้อ", safeText(row["ยี่ห้อ"]));
-        printLine("รุ่น", safeText(row["รุ่น"]), "S/N", safeText(row["หมายเลขเครื่อง"]));
-        y += 5; // Add some space
-
-        // Details Section (Multiline Support)
-        const printSection = (title, content, startX = 35, width = 150) => {
-            doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "bold");
-            doc.text(`${title}:`, 20, y);
-            y += 8;
-            doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "normal");
-            const splitContent = doc.splitTextToSize(safeText(content || ""), width);
-            doc.text(splitContent, startX, y);
-            y += (splitContent.length * 6) + 10; // 6 is roughly line height
-        };
-
-        printSection("อุปกรณ์ที่ส่งมาด้วย", row["อุปกรณ์ที่ส่งมาด้วย"], 60);
-        printSection("อาการที่แจ้งเสีย", row["อาการที่แจ้งเสีย"]);
-        printSection("ผลการซ่อม", row["ผลการซ่อม"]);
-
-        doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "bold");
-        doc.text("รับประกัน:", 20, y);
-        doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "normal");
-        doc.text(safeText(row["รับประกัน"] || ""), 45, y);
-        y += 10;
-
-        // Images (if available)
-        try {
-            if (row["รูปภาพ1"]) {
-                doc.addImage(row["รูปภาพ1"], 'JPEG', 20, y, 80, 50);
-            }
-            if (row["รูปภาพ2"]) {
-                doc.addImage(row["รูปภาพ2"], 'JPEG', 110, y, 80, 50);
-            }
-            y += 60;
-        } catch (e) {
-            console.warn('Could not add images to PDF:', e);
-            y += 20; // Just add some space if images fail
-        }
-
-        // Signatures
-        doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "bold");
-        doc.text("ช่าง", 50, y, { align: "center" });
-        doc.text("ลูกค้า", 150, y, { align: "center" });
-        
-        y += 6;
-        doc.setFont(hasThaiFont ? "THSarabun" : "helvetica", "normal");
-
-        try {
-            if (row["ลายเซ็นช่าง"]) {
-                doc.addImage(row["ลายเซ็นช่าง"], 'JPEG', 20, y, 60, 30); // x, y, width, height
-            }
-            if (row["ลายเซ็นลูกค้า"]) {
-                doc.addImage(row["ลายเซ็นลูกค้า"], 'JPEG', 120, y, 60, 30);
-            }
-            y += 40;
-        } catch (e) {
-            console.warn('Could not add signatures to PDF:', e);
-            y += 20; // Add space if signatures fail
-        }
-
-        // Contact Info below signatures
-        doc.text(`ชื่อ ${safeText(row["ชื่อช่าง"])}`, 50, y, { align: "center" });
-        doc.text(`ชื่อ ${safeText(row["ชื่อลูกค้า"])}`, 150, y, { align: "center" });
-        y += 6;
-
-        doc.text(`เบอร์โทร ${safeText(row["เบอร์ช่าง"])}`, 50, y, { align: "center" });
-        doc.text(`เบอร์โทร ${safeText(row["เบอร์ลูกค้า"])}`, 150, y, { align: "center" });
-        y += 10;
-
-        // Footer
-        doc.setFontSize(10);
-        doc.text(`เอกสารนี้ถูกสร้างขึ้นโดยระบบจัดการข้อมูล IDMS - ${new Date().toLocaleDateString('th-TH')}`, 105, 290, { align: 'center' });
-
-
-        return doc;
-    } catch (error) {
-        console.error('Error generating PDF:', error);
-        showNotification('เกิดข้อผิดพลาดในการสร้าง PDF', 'error');
-        return null;
-    }
+        img.src = URL.createObjectURL(file);
+    });
 }
 
-
-// ===== Signature System =====
+// ✅ Signature System
 let currentSignatureInput = null;
 
 function openSignature(input) {
@@ -1286,9 +540,9 @@ function openSignature(input) {
 function createSignaturePopup() {
     const popup = document.createElement('div');
     popup.id = 'signature-popup';
-    popup.className = 'signature-popup';
+    popup.className = 'modal signature-popup';
     popup.innerHTML = `
-        <div class="signature-content">
+        <div class="modal-content">
             <h3>ลายเซ็น</h3>
             <canvas id="signature-pad" width="400" height="200"></canvas>
             <div class="signature-buttons">
@@ -1347,9 +601,486 @@ function closeSignature() {
     currentSignatureInput = null;
 }
 
-// ===== Search and Filter =====
+// ✅ PDF Generation
+let currentPDFRow = null;
+
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+function previewPDF(row) {
+    currentPDFRow = row;
+    console.log("Preview PDF called for row:", row);
+
+    if (isMobileDevice()) {
+        showPDFOptions();
+    } else {
+        generateAndPreviewPDF(row);
+    }
+}
+
+function generateAndPreviewPDF(row) {
+    const doc = generatePDF(row);
+    if (!doc) {
+        showNotification('ไม่สามารถสร้าง PDF ได้', 'error');
+        console.error("PDF document was null, generation failed.");
+        return;
+    }
+    try {
+        window.open(doc.output('bloburl'), '_blank');
+        console.log("PDF opened in new window (bloburl).");
+    } catch (e) {
+        console.error("Failed to open PDF in new window:", e);
+        showNotification('ไม่สามารถเปิด PDF ได้ (อาจถูกบล็อกโดย Pop-up blocker)', 'error');
+    }
+}
+
+function showPDFOptions() {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.style.zIndex = '2000';
+    modal.innerHTML = `
+        <div class="modal-content" style="text-align: center; max-width: 300px;">
+            <h3 style="margin-bottom: 20px;">เลือกวิธีการดูรายงาน</h3>
+            <button onclick="viewHTMLPDF()" style="padding: 12px; margin: 10px; width: 100%; background: #8e44ad; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
+                📱 ดูในเว็บไซต์
+            </button>
+            <button onclick="downloadPDFFile()" style="padding: 12px; margin: 10px; width: 100%; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
+                📄 ดาวน์โหลด PDF
+            </button>
+            <button onclick="closeModal()" style="padding: 12px; margin: 10px; width: 100%; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
+                ❌ ยกเลิก
+            </button>
+        </div>
+    `;
+    modal.onclick = function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    };
+    document.body.appendChild(modal);
+}
+
+function viewHTMLPDF() {
+    if (!currentPDFRow) return;
+    closeModal();
+
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.style.zIndex = '2000';
+    modal.style.background = 'white';
+
+    const pdfContent = `
+        <div style="max-width: 100%; height: 100vh; overflow: auto; padding: 20px; background: white;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <h2 style="margin: 0; color: #2c3e50;">📋 Service Report</h2>
+                <div>
+                    <button onclick="printHTMLContent()" style="padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 4px; margin-right: 10px; cursor: pointer;">🖨️ พิมพ์</button>
+                    <button onclick="closeModal()" style="padding: 10px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">❌ ปิด</button>
+                </div>
+            </div>
+            <div id="pdf-html-content" style="background: white; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                ${createPDFHTMLContent(currentPDFRow)}
+            </div>
+        </div>
+    `;
+
+    modal.innerHTML = pdfContent;
+    document.body.appendChild(modal);
+}
+
+function createPDFHTMLContent(row) {
+    const safeText = (val) => (val !== undefined && val !== null ? String(val) : '-');
+
+    return `
+        <div style="font-family: 'Sarabun', 'TH Sarabun New', Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #3498db;">
+                <h1 style="color: #3498db; margin-bottom: 5px; font-size: 28px;">Service Report</h1>
+                <p style="color: #7f8c8d; font-size: 16px;">เลขที่ใบงาน: ${safeText(row["เลขที่ใบงาน"])}</p>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 14px;">
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa; width: 20%;">เลขที่ใบงาน</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; width: 30%;">${safeText(row["เลขที่ใบงาน"])}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa; width: 20%;">ประเภทงาน</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; width: 30%;">${safeText(row["ประเภทงาน"])}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">ชื่อโรงพยาบาล</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["ชื่อโรงพยาบาล"])}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">วันที่เปิดงาน</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["วันที่เปิดงาน"])}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">ชื่อเครื่อง</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["ชื่อเครื่อง"])}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">ยี่ห้อ</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["ยี่ห้อ"])}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">รุ่น</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["รุ่น"])}</td>
+                    <td style="padding: 12px; border: 1px solid #ddd; font-weight: bold; background: #f8f9fa;">หมายเลขเครื่อง</td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">${safeText(row["หมายเลขเครื่อง"])}</td>
+                </tr>
+            </table>
+            
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;">อุปกรณ์ที่ส่งมาด้วย</h3>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #3498db;">
+                    <p style="margin: 0; color: #2c3e50;">${safeText(row["อุปกรณ์ที่ส่งมาด้วย"])}</p>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;">อาการที่แจ้งเสีย</h3>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #e74c3c;">
+                    <p style="margin: 0; color: #2c3e50;">${safeText(row["อาการที่แจ้งเสีย"])}</p>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;">ผลการซ่อม</h3>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #27ae60;">
+                    <p style="margin: 0; color: #2c3e50;">${safeText(row["ผลการซ่อม"])}</p>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+                <h3 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;">รับประกัน</h3>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 6px;">
+                    <p style="margin: 0; color: #2c3e50;">${safeText(row["รับประกัน"])}</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-bottom: 25px;">
+                ${(row["รูปภาพ1"] ? `<img src="${row["รูปภาพ1"]}" alt="รูปภาพ1" style="max-width: 150px; max-height: 100px; border: 1px solid #ddd; margin: 5px;">` : '')}
+                ${(row["รูปภาพ2"] ? `<img src="${row["รูปภาพ2"]}" alt="รูปภาพ2" style="max-width: 150px; max-height: 100px; border: 1px solid #ddd; margin: 5px;">` : '')}
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd;">
+                <div style="text-align: center; flex: 1; min-width: 200px;">
+                    <div style="border-bottom: 2px solid #000; width: 200px; margin: 0 auto 15px; padding-bottom: 10px; font-weight: bold;">ลายเซ็นช่าง</div>
+                    ${(row["ลายเซ็นช่าง"] ? `<img src="${row["ลายเซ็นช่าง"]}" alt="ลายเซ็นช่าง" style="max-width: 150px; max-height: 75px; margin-bottom: 10px;">` : '')}
+                    <div style="font-size: 16px; font-weight: bold; color: #2c3e50;">${safeText(row["ชื่อช่าง"])}</div>
+                    <div style="color: #7f8c8d;">${safeText(row["เบอร์ช่าง"])}</div>
+                </div>
+                
+                <div style="text-align: center; flex: 1; min-width: 200px;">
+                    <div style="border-bottom: 2px solid #000; width: 200px; margin: 0 auto 15px; padding-bottom: 10px; font-weight: bold;">ลายเซ็นลูกค้า</div>
+                    ${(row["ลายเซ็นลูกค้า"] ? `<img src="${row["ลายเซ็นลูกค้า"]}" alt="ลายเซ็นลูกค้า" style="max-width: 150px; max-height: 75px; margin-bottom: 10px;">` : '')}
+                    <div style="font-size: 16px; font-weight: bold; color: #2c3e50;">${safeText(row["ชื่อลูกค้า"])}</div>
+                    <div style="color: #7f8c8d;">${safeText(row["เบอร์ลูกค้า"])}</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px; text-align: center; color: #7f8c8d; font-size: 12px; border-top: 1px solid #ddd; padding-top: 15px;">
+                <p>เอกสารนี้ถูกสร้างขึ้นโดยระบบจัดการข้อมูล IDMS</p>
+                <p>วันที่สร้าง: ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            </div>
+        </div>
+    `;
+}
+
+function printHTMLContent() {
+    const contentToPrint = document.getElementById('pdf-html-content');
+    if (!contentToPrint) {
+        showNotification('ไม่พบเนื้อหา PDF สำหรับพิมพ์', 'error');
+        return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Service Report - Print</title>
+            <style>
+                body { margin: 0; padding: 20px; font-family: 'Sarabun', 'TH Sarabun New', Arial, sans-serif; font-size: 12pt; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+                h1, h2, h3 { color: #333; margin-top: 20px; margin-bottom: 10px; }
+                div { line-height: 1.5; }
+                img { max-width: 100%; height: auto; }
+                @media print {
+                    body { margin: 0; padding: 0; }
+                    .no-print { display: none !important; }
+                }
+            </style>
+        </head>
+        <body>
+            ${contentToPrint.innerHTML}
+            <script>
+                window.onload = function() {
+                    window.print();
+                    setTimeout(function() {
+                        window.close();
+                    }, 500);
+                }
+            <\/script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
+
+function downloadPDFFile() {
+    if (!currentPDFRow) return;
+    closeModal();
+
+    try {
+        const doc = generatePDF(currentPDFRow);
+        if (!doc) return;
+
+        const filename = `${currentPDFRow["เลขที่ใบงาน"] || 'service'}_report.pdf`;
+        doc.save(filename);
+        showNotification('กำลังดาวน์โหลด PDF...', 'success');
+        console.log("PDF download triggered.");
+    } catch (error) {
+        console.error('Error in downloadPDF:', error);
+        showNotification('ไม่สามารถดาวน์โหลด PDF ได้', 'error');
+    }
+}
+
+function generatePDF(row) {
+    try {
+        const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+        const doc = new jsPDFLib();
+        const safeText = (val) => (val !== undefined && val !== null ? String(val) : "");
+
+        let y = 10;
+
+        // Title
+        doc.setFontSize(20);
+        doc.setTextColor(0, 0, 255);
+        doc.text("รายงานการซ่อม", 105, y, { align: 'center' });
+        y += 10;
+
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(12);
+
+        // Function to print a line with labels and values
+        const printLine = (label1, val1, label2, val2) => {
+            doc.setFont(undefined, 'bold');
+            doc.text(`${label1}:`, 20, y);
+            doc.setFont(undefined, 'normal');
+            doc.text(`${val1 || ''}`, 50, y);
+
+            doc.setFont(undefined, 'bold');
+            doc.text(`${label2}:`, 120, y);
+            doc.setFont(undefined, 'normal');
+            doc.text(`${val2 || ''}`, 150, y);
+
+            y += 8;
+        };
+
+        // Basic Info
+        printLine("เลขที่ใบงาน", safeText(row["เลขที่ใบงาน"]), "ประเภทงาน", safeText(row["ประเภทงาน"]));
+        printLine("ชื่อโรงพยาบาล", safeText(row["ชื่อโรงพยาบาล"]), "วันที่เปิดงาน", safeText(row["วันที่เปิดงาน"]));
+        printLine("ชื่อเครื่อง", safeText(row["ชื่อเครื่อง"]), "ยี่ห้อ", safeText(row["ยี่ห้อ"]));
+        printLine("รุ่น", safeText(row["รุ่น"]), "S/N", safeText(row["หมายเลขเครื่อง"]));
+        y += 5;
+
+        // Details Section
+        const printSection = (title, content, startX = 35, width = 150) => {
+            doc.setFont(undefined, 'bold');
+            doc.text(`${title}:`, 20, y);
+            y += 8;
+            doc.setFont(undefined, 'normal');
+            const splitContent = doc.splitTextToSize(safeText(content || ""), width);
+            doc.text(splitContent, startX, y);
+            y += (splitContent.length * 6) + 10;
+        };
+
+        printSection("อุปกรณ์ที่ส่งมาด้วย", row["อุปกรณ์ที่ส่งมาด้วย"], 60);
+        printSection("อาการที่แจ้งเสีย", row["อาการที่แจ้งเสีย"]);
+        printSection("ผลการซ่อม", row["ผลการซ่อม"]);
+
+        doc.setFont(undefined, 'bold');
+        doc.text("รับประกัน:", 20, y);
+        doc.setFont(undefined, 'normal');
+        doc.text(safeText(row["รับประกัน"] || ""), 45, y);
+        y += 10;
+
+        // Images
+        try {
+            if (row["รูปภาพ1"]) {
+                doc.addImage(row["รูปภาพ1"], 'JPEG', 20, y, 80, 50);
+            }
+            if (row["รูปภาพ2"]) {
+                doc.addImage(row["รูปภาพ2"], 'JPEG', 110, y, 80, 50);
+            }
+            y += 60;
+        } catch (e) {
+            console.warn('Could not add images to PDF:', e);
+            y += 20;
+        }
+
+        // Signatures
+        doc.setFont(undefined, 'bold');
+        doc.text("ช่าง", 50, y, { align: "center" });
+        doc.text("ลูกค้า", 150, y, { align: "center" });
+
+        y += 6;
+        doc.setFont(undefined, 'normal');
+
+        try {
+            if (row["ลายเซ็นช่าง"]) {
+                doc.addImage(row["ลายเซ็นช่าง"], 'JPEG', 20, y, 60, 30);
+            }
+            if (row["ลายเซ็นลูกค้า"]) {
+                doc.addImage(row["ลายเซ็นลูกค้า"], 'JPEG', 120, y, 60, 30);
+            }
+            y += 40;
+        } catch (e) {
+            console.warn('Could not add signatures to PDF:', e);
+            y += 20;
+        }
+
+        // Contact Info
+        doc.text(`ชื่อ ${safeText(row["ชื่อช่าง"])}`, 50, y, { align: "center" });
+        doc.text(`ชื่อ ${safeText(row["ชื่อลูกค้า"])}`, 150, y, { align: "center" });
+        y += 6;
+
+        doc.text(`เบอร์โทร ${safeText(row["เบอร์ช่าง"])}`, 50, y, { align: "center" });
+        doc.text(`เบอร์โทร ${safeText(row["เบอร์ลูกค้า"])}`, 150, y, { align: "center" });
+        y += 10;
+
+        // Footer
+        doc.setFontSize(10);
+        doc.text(`เอกสารนี้ถูกสร้างขึ้นโดยระบบจัดการข้อมูล IDMS - ${new Date().toLocaleDateString('th-TH')}`, 105, 290, { align: 'center' });
+
+        return doc;
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        showNotification('เกิดข้อผิดพลาดในการสร้าง PDF', 'error');
+        return null;
+    }
+}
+
+// ✅ Utility Functions
+function generateNextWorkNo() {
+    const data = currentData["service"] || [];
+    if (data.length === 0) return "IDMS001";
+
+    const workNos = data.map(row => {
+        const workNo = String(row["เลขที่ใบงาน"] || "");
+        const match = workNo.match(/IDMS(\d+)/);
+        return match ? parseInt(match[1], 10) : 0;
+    }).filter(num => !isNaN(num) && num > 0);
+
+    const maxNo = workNos.length > 0 ? Math.max(...workNos) : 0;
+    return "IDMS" + String(maxNo + 1).padStart(3, '0');
+}
+
+function generateNextSequence(sheet) {
+    const data = currentData[sheet] || [];
+    if (data.length === 0) return 1;
+
+    const sequences = data.map(row => {
+        const seq = parseInt(row["ลำดับ"] || 0, 10);
+        return isNaN(seq) ? 0 : seq;
+    }).filter(num => num > 0);
+
+    const maxSeq = sequences.length > 0 ? Math.max(...sequences) : 0;
+    return maxSeq + 1;
+}
+
+// ✅ Image Element Creation
+function createImageElement(src, isSignature = false) {
+    const img = document.createElement("img");
+    img.classList.add("preview");
+    if (isSignature) img.classList.add("signature-preview");
+
+    const uniqueUrls = new Set();
+    if (src) {
+        uniqueUrls.add(src);
+    }
+
+    let fileId = null;
+    const driveIdMatch = src ? (src.match(/id=([a-zA-Z0-9_-]+)/) || src.match(/\/d\/([a-zA-Z0-9_-]+)/)) : null;
+    if (driveIdMatch && driveIdMatch[1]) {
+        fileId = driveIdMatch[1];
+        uniqueUrls.add(`https://drive.google.com/uc?id=${fileId}`);
+        uniqueUrls.add(`https://drive.google.com/thumbnail?id=${fileId}`);
+    }
+
+    if (src && src.includes('googleusercontent.com/profile/picture/1')) {
+        const transformedThumbnail = src.replace('googleusercontent.com/profile/picture/1', 'drive.google.com/thumbnail?id=');
+        const transformedUc = src.replace('googleusercontent.com/profile/picture/1', 'drive.google.com/uc?id=');
+        uniqueUrls.add(transformedThumbnail);
+        uniqueUrls.add(transformedUc);
+    }
+
+    const fallbackUrls = Array.from(uniqueUrls);
+    let currentIndex = 0;
+
+    function tryNextUrl() {
+        if (currentIndex < fallbackUrls.length) {
+            img.src = fallbackUrls[currentIndex];
+            currentIndex++;
+        } else {
+            img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y4ZjlmYSIgc3Ryb2tlPSIjZGVlMmU2IiBzdHJva2Utd2lkdGg9IjIiLz4KICA8dGV4dCB4PSI1MCIgeT0iNTUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5YTNiNCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Tm8gSW1hZ2U8L3RleHQ+Cjwvc3ZnPg==';
+            img.alt = "ไม่สามารถโหลดรูปได้";
+            img.title = "รูปภาพไม่สามารถแสดงได้";
+        }
+    }
+
+    img.onerror = tryNextUrl;
+    img.onclick = () => openImageModal(img.src);
+
+    tryNextUrl();
+    return img;
+}
+
+function openImageModal(src) {
+    const modal = document.createElement('div');
+    modal.className = 'modal show';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 800px;">
+            <button onclick="this.closest('.modal').remove()" style="float: right; margin-bottom: 10px;">✕</button>
+            <img src="${src}" style="width: 100%; height: auto; border-radius: 4px;">
+        </div>
+    `;
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+    document.body.appendChild(modal);
+}
+
+// ✅ Form Validation
+function validateFormData(sheet, data) {
+    const errors = [];
+
+    if (requiredFields[sheet]) {
+        requiredFields[sheet].forEach(field => {
+            if (!data[field] || String(data[field]).trim() === '') {
+                errors.push(`${field} จำเป็นต้องกรอก`);
+            }
+        });
+    }
+
+    const phoneFields = ["เบอร์โทร", "เบอร์ลูกค้า", "เบอร์ช่าง"];
+    phoneFields.forEach(field => {
+        if (data[field] && !/^[0-9\-+\s()]{8,15}$/.test(data[field])) {
+            errors.push(`${field} รูปแบบไม่ถูกต้อง`);
+        }
+    });
+
+    if (data["email"] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data["email"])) {
+        errors.push("รูปแบบ Email ไม่ถูกต้อง");
+    }
+
+    return errors;
+}
+
+// ✅ Search and Filter Functions
 function addSearchFilters() {
     const container = document.getElementById("tables-container");
+    if (!container) return;
+
     const searchDiv = document.createElement("div");
     searchDiv.innerHTML = `
         <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
@@ -1384,24 +1115,25 @@ function performSearch() {
         );
     });
 
-    renderTable(sheet, filteredData);
+    // This would need to be implemented per page
     showNotification(`พบข้อมูล ${filteredData.length} รายการ`, 'info');
 }
 
 function clearSearch() {
-    document.getElementById("search-sheet").value = '';
-    document.getElementById("search-input").value = '';
-
-    sheetsOrder.forEach(sheet => {
-        renderTable(sheet, currentData[sheet] || []);
-    });
+    const searchInput = document.getElementById("search-input");
+    const searchSheet = document.getElementById("search-sheet");
+    
+    if (searchInput) searchInput.value = '';
+    if (searchSheet) searchSheet.value = '';
 
     showNotification('ล้างการค้นหาเรียบร้อย', 'success');
 }
 
-// ===== Export Functions =====
+// ✅ Export Functions
 function addExportButtons() {
     const container = document.getElementById("tables-container");
+    if (!container) return;
+
     const exportDiv = document.createElement("div");
     exportDiv.innerHTML = `
         <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
@@ -1480,136 +1212,39 @@ function downloadFile(content, filename, contentType) {
     window.URL.revokeObjectURL(url);
 }
 
-// ===== Statistics =====
-function addStatistics() {
-    const container = document.getElementById("tables-container");
-    const statsDiv = document.createElement("div");
-    statsDiv.innerHTML = `
-        <div style="background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h3 style="margin-bottom: 10px;">สถิติข้อมูล</h3>
-            <div id="statistics-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-            </div>
-        </div>
-    `;
-    container.insertBefore(statsDiv, container.firstChild);
-    updateStatistics();
-}
-
-function updateStatistics() {
-    const statsContent = document.getElementById("statistics-content");
-    if (!statsContent) return;
-
-    let html = '';
-
-    sheetsOrder.forEach(sheet => {
-        const data = currentData[sheet] || [];
-        const count = data.length;
-
-        html += `
-            <div style="text-align: center; padding: 10px; background: #ecf0f1; border-radius: 4px;">
-                <div style="font-size: 24px; font-weight: bold; color: #2c3e50;">${count}</div>
-                <div style="color: #7f8c8d; text-transform: uppercase; font-size: 12px;">${sheet}</div>
-            </div>
-        `;
-    });
-
-    const today = new Date().toISOString().split('T')[0];
-    const todayService = (currentData.service || []).filter(row => row['วันที่เปิดงาน'] === today).length;
-    const todayRequest = (currentData.request || []).filter(row => row['วันที่แจ้งซ่อม'] === today).length;
-
-    html += `
-        <div style="text-align: center; padding: 10px; background: #e8f8f5; border-radius: 4px; border-left: 4px solid #27ae60;">
-            <div style="font-size: 24px; font-weight: bold; color: #27ae60;">${todayService}</div>
-            <div style="color: #27ae60; font-size: 12px;">งานวันนี้</div>
-        </div>
-        <div style="text-align: center; padding: 10px; background: #fef9e7; border-radius: 4px; border-left: 4px solid #f39c12;">
-            <div style="font-size: 24px; font-weight: bold; color: #f39c12;">${todayRequest}</div>
-            <div style="color: #f39c12; font-size: 12px;">แจ้งซ่อมวันนี้</div>
-        </div>
-    `;
-
-    statsContent.innerHTML = html;
-}
-
-// ===== Auto-refresh =====
-let autoRefreshInterval = null;
-
-function enableAutoRefresh(intervalMinutes = 5) {
-    if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-    }
-
-    autoRefreshInterval = setInterval(() => {
-        console.log('Auto refreshing data...');
-        sheetsOrder.forEach(sheet => {
-            loadSheetData(sheet);
-        });
-        updateStatistics();
-    }, intervalMinutes * 60 * 1000);
-
-    showNotification(`เปิดการอัพเดทอัตโนมัติทุก ${intervalMinutes} นาที`, 'info');
-}
-
-function disableAutoRefresh() {
-    if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-        autoRefreshInterval = null;
-        showNotification('ปิดการอัพเดทอัตโนมัติ', 'info');
-    }
-}
-
-// ===== Dynamic CSS =====
+// ✅ Initialize Core CSS
 function addDynamicCSS() {
     if (document.getElementById('dynamic-styles')) return;
 
     const style = document.createElement('style');
     style.id = 'dynamic-styles';
     style.textContent = `
-        /* General Modal styling for PDF options/viewer */
         .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1000; /* Sit on top */
+            display: none;
+            position: fixed;
+            z-index: 1000;
             left: 0;
             top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
             justify-content: center;
             align-items: center;
-            padding-top: 60px; /* Location of the box */
         }
         .modal.show {
-            display: flex; /* Show the modal */
+            display: flex;
         }
         .modal-content {
             background-color: #fefefe;
-            margin: auto; /* 15% from the top and centered */
+            margin: auto;
             padding: 20px;
             border: 1px solid #888;
-            width: 80%; /* Could be more or less, depending on screen size */
+            width: 80%;
             border-radius: 8px;
             box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
-            position: relative; /* Needed for close button positioning */
+            position: relative;
         }
-        .close-button {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            position: absolute;
-            right: 20px;
-            top: 10px;
-        }
-        .close-button:hover,
-        .close-button:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-
         .notification {
             position: fixed;
             top: 20px;
@@ -1625,17 +1260,14 @@ function addDynamicCSS() {
             transition: all 0.3s ease;
             white-space: pre-line;
         }
-        
         .notification.show {
             opacity: 1;
             transform: translateX(0);
         }
-        
         .notification.info { background: #3498db; }
         .notification.success { background: #27ae60; }
         .notification.error { background: #e74c3c; }
         .notification.warning { background: #f39c12; }
-        
         .loader {
             display: none;
             position: fixed;
@@ -1644,7 +1276,6 @@ function addDynamicCSS() {
             transform: translate(-50%, -50%);
             z-index: 2500;
         }
-        
         .loader-spinner {
             width: 50px;
             height: 50px;
@@ -1653,12 +1284,10 @@ function addDynamicCSS() {
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
         .signature-popup {
             display: none;
             position: fixed;
@@ -1669,65 +1298,11 @@ function addDynamicCSS() {
             background: rgba(0,0,0,0.7);
             z-index: 2000;
         }
-        
         .signature-popup.show {
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        
-        .signature-content {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        #signature-pad {
-            border: 2px solid #3498db;
-            border-radius: 4px;
-            margin: 10px 0;
-            cursor: crosshair;
-            background: white;
-        }
-        
-        .signature-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 15px;
-        }
-        
-        .signature-buttons button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .clear-btn { background: #e74c3c; color: white; }
-        .clear-btn:hover { background: #c0392b; }
-        .save-sig-btn { background: #27ae60; color: white; }
-        .save-sig-btn:hover { background: #2ecc71; }
-        .cancel-sig-btn { background: #95a5a6; color: white; }
-        .cancel-sig-btn:hover { background: #7f8c8d; }
-        
-        select {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            background: white;
-            min-width: 150px;
-        }
-        
-        select:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
-        }
-        
         .preview {
             max-width: 100px;
             max-height: 100px;
@@ -1737,56 +1312,86 @@ function addDynamicCSS() {
             cursor: pointer;
             object-fit: cover;
         }
-        
         .signature-preview {
             max-width: 150px;
             max-height: 75px;
             border: 2px solid #3498db;
         }
-        
         @media (max-width: 768px) {
             #signature-pad {
                 width: 300px;
                 height: 150px;
             }
-            
             .notification {
                 right: 10px;
                 left: 10px;
                 max-width: none;
                 font-size: 14px;
             }
-            
-            select {
-                min-width: 120px;
-                font-size: 13px;
-            }
-            
-            .preview {
-                max-width: 80px;
-                max-height: 80px;
-            }
-        }
-        
-        .data-table td img.preview {
-            max-width: 60px;
-            max-height: 60px;
-            border-radius: 4px;
-            object-fit: cover;
         }
     `;
     document.head.appendChild(style);
 }
 
-// ===== Start Application =====
+// ✅ Initialize Core Application
+function initializeApp() {
+    addDynamicCSS();
+}
+
+// Start Application
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
     initializeApp();
 }
 
-// Fallback logo variable (assuming it might be defined elsewhere, if not, it will be an empty string)
-// ✅ FIX: Ensure these are defined. If you use actual base64 strings, they must be included in your HTML/JS.
-const logoBase64 = typeof logoBase64 !== 'undefined' ? logoBase64 : '';
-const THSarabun = typeof THSarabun !== 'undefined' ? THSarabun : undefined;
-const THSarabunBold = typeof THSarabunBold !== 'undefined' ? THSarabunBold : undefined;
+// Global callback for page-specific data changes
+window.onDataChanged = null;
+
+// เพิ่มฟังก์ชัน Utility ด้านล่างใน app.js
+
+function convertToCSV(data, schema) {
+    const headers = schema.filter(f => f !== 'id');
+    let csv = headers.join(',') + '\n';
+
+    data.forEach(row => {
+        const values = headers.map(header => {
+            const value = row[header] || '';
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+        });
+        csv += values.join(',') + '\n';
+    });
+
+    return csv;
+}
+
+function downloadCSV(csv, filename) {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// เพิ่มฟังก์ชัน callback สำหรับการอัพเดทข้อมูล
+window.onDataChanged = function(sheet) {
+    // ฟังก์ชันนี้จะถูกเรียกจากแต่ละหน้าเมื่อข้อมูลเปลี่ยนแปลง
+    console.log(`Data changed in ${sheet}`);
+    
+    // โหลดข้อมูลใหม่สำหรับ sheet นั้น
+    if (currentData[sheet]) {
+        delete currentData[sheet]; // ล้าง cache
+    }
+    
+    // โหลดข้อมูลใหม่ (แต่ละหน้าจะจัดการการ render ใหม่เอง)
+    if (typeof window.loadDashboardData === 'function') {
+        window.loadDashboardData();
+    }
+};

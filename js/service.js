@@ -2,6 +2,21 @@
 let currentServicePage = 1;
 const servicesPerPage = 10;
 
+// ✅ ฟังก์ชันป้องกัน error จากค่าที่ไม่ใช่ข้อความ
+// ✅ ฟังก์ชันป้องกัน error จากค่าที่ไม่ใช่ข้อความ (เวอร์ชันเสถียร)
+function safeText(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'object') {
+        try {
+            return JSON.stringify(value); // เผื่อมี object หลุดมา
+        } catch {
+            return '[object]';
+        }
+    }
+    return String(value);
+}
+
+
 async function loadServiceData() {
     try {
         showLoading(true);
@@ -24,22 +39,24 @@ function renderServiceTable(services) {
     const startIndex = (currentServicePage - 1) * servicesPerPage;
     const paginatedServices = services.slice(startIndex, startIndex + servicesPerPage);
 
-    tableBody.innerHTML = paginatedServices.map(service => `
+    tableBody.innerHTML = paginatedServices.map(service => {
+        const desc = safeText(service['อาการที่แจ้งเสีย']);
+        return `
         <tr>
-            <td>${service['เลขที่ใบงาน'] || '-'}</td>
-            <td>${service['วันที่เปิดงาน'] || '-'}</td>
-            <td>${service['ชื่อโรงพยาบาล'] || '-'}</td>
-            <td>${service['ชื่อเครื่อง'] || '-'}</td>
-            <td>${service['ยี่ห้อ'] || '-'}/${service['รุ่น'] || '-'}</td>
-            <td>${(service['อาการที่แจ้งเสีย'] || '').substring(0, 50)}${(service['อาการที่แจ้งเสีย'] || '').length > 50 ? '...' : ''}</td>
+            <td>${safeText(service['เลขที่ใบงาน']) || '-'}</td>
+            <td>${safeText(service['วันที่เปิดงาน']) || '-'}</td>
+            <td>${safeText(service['ชื่อโรงพยาบาล']) || '-'}</td>
+            <td>${safeText(service['ชื่อเครื่อง']) || '-'}</td>
+            <td>${safeText(service['ยี่ห้อ'])}/${safeText(service['รุ่น'])}</td>
+            <td>${desc.length > 50 ? desc.substring(0, 50) + '...' : desc}</td>
             <td><span class="status-badge pending">รอดำเนินการ</span></td>
             <td class="action-buttons">
                 <button class="btn-edit" onclick="openSection('service','edit',${JSON.stringify(service).replace(/"/g, '&quot;')})">✏️</button>
                 <button class="btn-del" onclick="deleteRow('${service.id}','service')">🗑️</button>
                 <button class="btn-pdf" onclick="previewPDF(${JSON.stringify(service).replace(/"/g, '&quot;')})">📄</button>
             </td>
-        </tr>
-    `).join('');
+        </tr>`;
+    }).join('');
 
     updateServicePagination(services.length);
 }
@@ -49,18 +66,18 @@ function updateServicePagination(totalServices) {
     if (!pagination) return;
 
     const totalPages = Math.ceil(totalServices / servicesPerPage);
-    
     let paginationHTML = '';
+
     if (currentServicePage > 1) {
         paginationHTML += `<button onclick="changeServicePage(${currentServicePage - 1})">← ก่อนหน้า</button>`;
     }
-    
+
     paginationHTML += `<span>หน้า ${currentServicePage} จาก ${totalPages}</span>`;
-    
+
     if (currentServicePage < totalPages) {
         paginationHTML += `<button onclick="changeServicePage(${currentServicePage + 1})">ถัดไป →</button>`;
     }
-    
+
     pagination.innerHTML = paginationHTML;
 }
 
@@ -70,7 +87,6 @@ function changeServicePage(page) {
 }
 
 function updateServiceStats(services) {
-    // อัพเดทสถิติใน dashboard
     const totalElement = document.getElementById('total-services');
     const pendingElement = document.getElementById('pending-services');
     const completedElement = document.getElementById('completed-services');
@@ -81,26 +97,20 @@ function updateServiceStats(services) {
     if (completedElement) completedElement.textContent = services.filter(s => s['วันที่ปิดงาน']).length;
     if (urgentElement) urgentElement.textContent = services.filter(s => s['ประเภทงาน'] === 'เร่งด่วน').length;
 
-    // อัพเดทสถิติใน sidebar
     const todayNew = document.getElementById('today-new');
     const todayCompleted = document.getElementById('today-completed');
     const todayWaiting = document.getElementById('today-waiting');
 
-    if (todayNew) todayNew.textContent = services.filter(s => 
-        s['วันที่เปิดงาน'] === new Date().toISOString().split('T')[0]
-    ).length;
+    const today = new Date().toISOString().split('T')[0];
 
-    if (todayCompleted) todayCompleted.textContent = services.filter(s => 
-        s['วันที่ปิดงาน'] === new Date().toISOString().split('T')[0]
-    ).length;
-
-    if (todayWaiting) todayWaiting.textContent = services.filter(s => 
-        !s['วันที่ปิดงาน'] && s['อาการที่แจ้งเสีย']?.includes('รออะไหล่')
+    if (todayNew) todayNew.textContent = services.filter(s => s['วันที่เปิดงาน'] === today).length;
+    if (todayCompleted) todayCompleted.textContent = services.filter(s => s['วันที่ปิดงาน'] === today).length;
+    if (todayWaiting) todayWaiting.textContent = services.filter(s =>
+        !s['วันที่ปิดงาน'] && safeText(s['อาการที่แจ้งเสีย']).includes('รออะไหล่')
     ).length;
 }
 
 function updateServiceCharts(services) {
-    // Weekly Service Chart
     const weeklyCtx = document.getElementById('weeklyServiceChart')?.getContext('2d');
     if (weeklyCtx) {
         new Chart(weeklyCtx, {
@@ -116,7 +126,6 @@ function updateServiceCharts(services) {
         });
     }
 
-    // Service Status Chart
     const statusCtx = document.getElementById('serviceStatusChart')?.getContext('2d');
     if (statusCtx) {
         new Chart(statusCtx, {
@@ -134,18 +143,11 @@ function updateServiceCharts(services) {
 
 function searchServices() {
     const searchTerm = document.getElementById('service-search').value.toLowerCase();
-    const statusFilter = document.getElementById('status-filter').value;
-    const dateFilter = document.getElementById('date-filter').value;
-
-    let filteredServices = currentData.service || [];
-
-    if (searchTerm) {
-        filteredServices = filteredServices.filter(service => 
-            (service['เลขที่ใบงาน'] || '').toLowerCase().includes(searchTerm) ||
-            (service['ชื่อโรงพยาบาล'] || '').toLowerCase().includes(searchTerm) ||
-            (service['ชื่อเครื่อง'] || '').toLowerCase().includes(searchTerm)
-        );
-    }
+    const filteredServices = (currentData.service || []).filter(service =>
+        safeText(service['เลขที่ใบงาน']).toLowerCase().includes(searchTerm) ||
+        safeText(service['ชื่อโรงพยาบาล']).toLowerCase().includes(searchTerm) ||
+        safeText(service['ชื่อเครื่อง']).toLowerCase().includes(searchTerm)
+    );
 
     renderServiceTable(filteredServices);
 }
@@ -166,7 +168,6 @@ function exportServiceData() {
     showNotification('ส่งออกข้อมูลงานซ่อมเรียบร้อย', 'success');
 }
 
-// Initialize service page
 document.addEventListener('DOMContentLoaded', function() {
     loadServiceData();
     window.onDataChanged = function(sheet) {

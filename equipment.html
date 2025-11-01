@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบจัดการอุปกรณ์</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/page.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="page-header">
+    <div class="container">
+      <div class="header-main">
+        <h1>⚙️ ระบบจัดการอุปกรณ์</h1>
+        <div class="header-actions">
+          <a href="index.html" class="btn-secondary">🏠 หน้าหลัก</a>
+          <a href="sparepart.html" class="btn-secondary">🔩 อะไหล่</a>
+          <button class="btn-primary" onclick="openSection('equipment','add')">
+            ➕ เพิ่มอุปกรณ์
+          </button>
+        </div>
+      </div>
+      <nav class="breadcrumb">
+        <a href="index.html">หน้าหลัก</a> > <span>อุปกรณ์</span>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Equipment Dashboard -->
+  <section class="page-dashboard">
+    <div class="container">
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-content">
+            <div class="stat-value" id="total-equipment">0</div>
+            <div class="stat-label">อุปกรณ์ทั้งหมด</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-content">
+            <div class="stat-value" id="available-equipment">0</div>
+            <div class="stat-label">พร้อมใช้งาน</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔧</div>
+          <div class="stat-content">
+            <div class="stat-value" id="maintenance-equipment">0</div>
+            <div class="stat-label">อยู่ระหว่างซ่อม</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-content">
+            <div class="stat-value" id="total-value">0 ฿</div>
+            <div class="stat-label">มูลค่ารวม</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Actions -->
+  <section class="tools-section">
+    <div class="container">
+      <div class="tools-grid">
+        <div class="tool-card" onclick="openSection('equipment','add')">
+          <div class="tool-icon">➕</div>
+          <div class="tool-content">
+            <h4>เพิ่มอุปกรณ์</h4>
+            <p>บันทึกอุปกรณ์ใหม่</p>
+          </div>
+        </div>
+        <div class="tool-card" onclick="quickEquipmentCheck()">
+          <div class="tool-icon">🔍</div>
+          <div class="tool-content">
+            <h4>ตรวจสอบอุปกรณ์</h4>
+            <p>ตรวจสอบสถานะอุปกรณ์</p>
+          </div>
+        </div>
+        <div class="tool-card" onclick="generateEquipmentReport()">
+          <div class="tool-icon">📊</div>
+          <div class="tool-content">
+            <h4>รายงานอุปกรณ์</h4>
+            <p>ส่งออกรายงาน</p>
+          </div>
+        </div>
+        <div class="tool-card" onclick="showMaintenanceSchedule()">
+          <div class="tool-icon">📅</div>
+          <div class="tool-content">
+            <h4>ตารางบำรุงรักษา</h4>
+            <p>ดูตารางบำรุงรักษา</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="page-main">
+    <div class="container">
+      <div class="content-grid">
+        <!-- Equipment Table -->
+        <div class="main-content">
+          <div class="table-header">
+            <h3>รายการอุปกรณ์</h3>
+            <div class="table-actions">
+              <div class="filter-group">
+                <select id="equipment-status" onchange="filterEquipment()">
+                  <option value="all">สถานะทั้งหมด</option>
+                  <option value="available">พร้อมใช้งาน</option>
+                  <option value="maintenance">อยู่ระหว่างซ่อม</option>
+                  <option value="unavailable">ไม่พร้อมใช้งาน</option>
+                  <option value="sold">จำหน่ายแล้ว</option>
+                </select>
+                <select id="equipment-category" onchange="filterEquipment()">
+                  <option value="">ประเภททั้งหมด</option>
+                  <!-- Categories will be populated dynamically -->
+                </select>
+              </div>
+              <div class="search-box">
+                <input type="text" id="equipment-search" placeholder="ค้นหาชื่อเครื่อง, ยี่ห้อ, รุ่น...">
+                <button onclick="searchEquipment()">🔍</button>
+              </div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="equipment-table">
+              <thead>
+                <tr>
+                  <th>รูปภาพ</th>
+                  <th>ชื่อเครื่อง</th>
+                  <th>ประเภท</th>
+                  <th>ยี่ห้อ/รุ่น</th>
+                  <th>หมายเลขเครื่อง</th>
+                  <th>สถานะ</th>
+                  <th>จำนวน</th>
+                  <th>ราคา</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="equipment-table-body">
+                <!-- Data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>📊 สถิติอุปกรณ์</h4>
+            </div>
+            <div class="equipment-stats">
+              <div class="stat-row">
+                <span class="stat-name">ทั้งหมด</span>
+                <span class="stat-value" id="stat-total">0</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-name">พร้อมใช้งาน</span>
+                <span class="stat-value available" id="stat-available">0</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-name">อยู่ระหว่างซ่อม</span>
+                <span class="stat-value maintenance" id="stat-maintenance">0</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-name">ไม่พร้อมใช้งาน</span>
+                <span class="stat-value unavailable" id="stat-unavailable">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>🔧 ต้องการบำรุงรักษา</h4>
+            </div>
+            <div class="maintenance-list" id="maintenance-needed">
+              <!-- Maintenance items will be loaded here -->
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="card-header">
+              <h4>📋 หมวดหมู่</h4>
+            </div>
+            <div class="category-list" id="equipment-categories">
+              <!-- Categories will be loaded here -->
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modals -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-title">เพิ่มอุปกรณ์</h3>
+      <form id="entity-form">
+        <!-- Form will be generated here -->
+      </form>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/equipment.js"></script>
+</body>
+</html>
